@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>conversation stats</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --canvas-base: #0a0a0b;
+      --canvas-surface: #131316;
+      --canvas-elevated: #1a1a1f;
+      --border: #2a2a2f;
+      --border-strong: #3a3a42;
+      --text-primary: #e4e4e7;
+      --text-secondary: #a1a1aa;
+      --text-tertiary: #71717a;
+      --accent-primary: #3b82f6;
+      --accent-surface: #3b82f615;
+      --heat-0: #1a1a1f;
+      --heat-1: #1e3a5f;
+      --heat-2: #2563eb;
+      --heat-3: #3b82f6;
+      --heat-4: #60a5fa;
+      --heat-5: #93c5fd;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--canvas-base);
+      color: var(--text-primary);
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .title {
+      font-size: 14px;
+      text-transform: lowercase;
+      letter-spacing: 0.15em;
+      color: var(--text-secondary);
+    }
+
+    .month-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .month-nav button {
+      background: var(--canvas-surface);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 6px 12px;
+      font-family: inherit;
+      font-size: 11px;
+      text-transform: lowercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .month-nav button:hover {
+      border-color: var(--border-strong);
+      background: var(--canvas-elevated);
+    }
+
+    .month-label {
+      font-size: 13px;
+      text-transform: lowercase;
+      letter-spacing: 0.1em;
+      color: var(--text-primary);
+      min-width: 120px;
+      text-align: center;
+    }
+
+    /* Drop Zone */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 24px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: var(--accent-primary);
+      background: var(--accent-surface);
+    }
+
+    .drop-zone-text {
+      color: var(--text-tertiary);
+      text-transform: lowercase;
+      letter-spacing: 0.1em;
+    }
+
+    .drop-zone-text span {
+      color: var(--accent-primary);
+    }
+
+    .file-count {
+      margin-top: 12px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: lowercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 24px;
+      padding: 12px 16px;
+      background: var(--canvas-surface);
+      border: 1px solid var(--border);
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .stat-label {
+      color: var(--text-tertiary);
+      text-transform: lowercase;
+      letter-spacing: 0.08em;
+      font-size: 11px;
+    }
+
+    .stat-value {
+      color: var(--accent-primary);
+      font-size: 14px;
+    }
+
+    /* Heatmap */
+    .heatmap-container {
+      background: var(--canvas-surface);
+      border: 1px solid var(--border);
+      padding: 20px;
+      overflow-x: auto;
+    }
+
+    .heatmap {
+      display: grid;
+      grid-template-columns: 40px repeat(24, 1fr);
+      gap: 2px;
+      min-width: 600px;
+    }
+
+    .heatmap-header {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      text-align: center;
+      padding: 4px 0;
+      text-transform: lowercase;
+    }
+
+    .heatmap-row {
+      display: contents;
+    }
+
+    .day-label {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+    }
+
+    .heatmap-cell {
+      aspect-ratio: 1;
+      min-width: 20px;
+      min-height: 20px;
+      background: var(--heat-0);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .heatmap-cell:hover {
+      transform: scale(1.1);
+      z-index: 10;
+      box-shadow: 0 0 0 2px var(--accent-primary);
+    }
+
+    .heatmap-cell.heat-1 { background: var(--heat-1); }
+    .heatmap-cell.heat-2 { background: var(--heat-2); }
+    .heatmap-cell.heat-3 { background: var(--heat-3); }
+    .heatmap-cell.heat-4 { background: var(--heat-4); }
+    .heatmap-cell.heat-5 { background: var(--heat-5); }
+
+    .heatmap-cell[title]:hover::after {
+      content: attr(title);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--canvas-elevated);
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      font-size: 10px;
+      white-space: nowrap;
+      z-index: 100;
+      margin-bottom: 4px;
+    }
+
+    /* Day row click highlight */
+    .day-row-clickable {
+      cursor: pointer;
+    }
+
+    .day-row-clickable:hover .day-label {
+      color: var(--accent-primary);
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      justify-content: flex-end;
+    }
+
+    .legend-label {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      text-transform: lowercase;
+      letter-spacing: 0.05em;
+    }
+
+    .legend-scale {
+      display: flex;
+      gap: 2px;
+    }
+
+    .legend-box {
+      width: 12px;
+      height: 12px;
+    }
+
+    /* Modal / Overlay Views */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--canvas-base);
+      z-index: 1000;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .overlay.active {
+      display: block;
+    }
+
+    .overlay-header {
+      position: sticky;
+      top: 0;
+      background: var(--canvas-base);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+    }
+
+    .overlay-title {
+      font-size: 13px;
+      text-transform: lowercase;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+    }
+
+    .overlay-close {
+      background: var(--canvas-surface);
+      border: 1px solid var(--border);
+      color: var(--text-tertiary);
+      padding: 6px 12px;
+      font-family: inherit;
+      font-size: 10px;
+      text-transform: lowercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .overlay-close:hover {
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .overlay-content {
+      padding: 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* Conversation List */
+    .convo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .convo-item {
+      background: var(--canvas-surface);
+      border: 1px solid var(--border);
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .convo-item:hover {
+      border-color: var(--accent-primary);
+      background: var(--canvas-elevated);
+    }
+
+    .convo-time {
+      font-size: 11px;
+      color: var(--accent-primary);
+      text-transform: lowercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+
+    .convo-preview {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .convo-meta {
+      margin-top: 8px;
+      font-size: 10px;
+      color: var(--text-tertiary);
+      text-transform: lowercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Conversation View */
+    .message {
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .message:last-child {
+      border-bottom: none;
+    }
+
+    .message-role {
+      font-size: 10px;
+      text-transform: lowercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+      padding: 4px 8px;
+      display: inline-block;
+    }
+
+    .message-role.user {
+      background: var(--accent-surface);
+      color: var(--accent-primary);
+    }
+
+    .message-role.assistant {
+      background: var(--canvas-elevated);
+      color: var(--text-secondary);
+    }
+
+    .message-content {
+      color: var(--text-primary);
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message-content code {
+      background: var(--canvas-elevated);
+      padding: 2px 6px;
+      font-size: 11px;
+    }
+
+    .message-content pre {
+      background: var(--canvas-elevated);
+      padding: 16px;
+      overflow-x: auto;
+      margin: 12px 0;
+      border: 1px solid var(--border);
+    }
+
+    /* Toggle */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .toggle-label {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      text-transform: lowercase;
+      letter-spacing: 0.05em;
+    }
+
+    .toggle-switch {
+      display: flex;
+      background: var(--canvas-surface);
+      border: 1px solid var(--border);
+    }
+
+    .toggle-option {
+      padding: 6px 12px;
+      font-size: 10px;
+      text-transform: lowercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      color: var(--text-tertiary);
+      transition: all 0.15s ease;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+    }
+
+    .toggle-option.active {
+      background: var(--accent-primary);
+      color: var(--canvas-base);
+    }
+
+    .toggle-option:hover:not(.active) {
+      color: var(--text-primary);
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-tertiary);
+      text-transform: lowercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* Hidden file input */
+    #file-input {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <input type="file" id="file-input" multiple accept=".jsonl,.json">
+
+  <div class="container">
+    <div class="header">
+      <h1 class="title">conversation stats</h1>
+      <div class="month-nav">
+        <button id="prev-month">&larr; prev</button>
+        <span class="month-label" id="month-label">jan 2026</span>
+        <button id="next-month">next &rarr;</button>
+      </div>
+    </div>
+
+    <div class="drop-zone" id="drop-zone">
+      <div class="drop-zone-text">
+        <span>drag & drop</span> conversation files here (.jsonl)
+      </div>
+      <div class="file-count" id="file-count"></div>
+    </div>
+
+    <div class="stats-bar" id="stats-bar" style="display: none;">
+      <div class="stat-item">
+        <span class="stat-label">conversations:</span>
+        <span class="stat-value" id="stat-convos">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">messages:</span>
+        <span class="stat-value" id="stat-messages">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">this month:</span>
+        <span class="stat-value" id="stat-month">0</span>
+      </div>
+    </div>
+
+    <div class="toggle-container">
+      <span class="toggle-label">show:</span>
+      <div class="toggle-switch">
+        <button class="toggle-option active" data-mode="messages">messages</button>
+        <button class="toggle-option" data-mode="time">time</button>
+      </div>
+    </div>
+
+    <div class="heatmap-container" id="heatmap-container">
+      <div class="heatmap" id="heatmap"></div>
+      <div class="legend">
+        <span class="legend-label">less</span>
+        <div class="legend-scale">
+          <div class="legend-box" style="background: var(--heat-0);"></div>
+          <div class="legend-box" style="background: var(--heat-1);"></div>
+          <div class="legend-box" style="background: var(--heat-2);"></div>
+          <div class="legend-box" style="background: var(--heat-3);"></div>
+          <div class="legend-box" style="background: var(--heat-4);"></div>
+          <div class="legend-box" style="background: var(--heat-5);"></div>
+        </div>
+        <span class="legend-label">more</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day conversations overlay -->
+  <div class="overlay" id="day-overlay">
+    <div class="overlay-header">
+      <span class="overlay-title" id="day-overlay-title">conversations</span>
+      <button class="overlay-close" id="day-overlay-close">esc to close</button>
+    </div>
+    <div class="overlay-content">
+      <div class="convo-list" id="convo-list"></div>
+    </div>
+  </div>
+
+  <!-- Conversation view overlay -->
+  <div class="overlay" id="convo-overlay">
+    <div class="overlay-header">
+      <span class="overlay-title" id="convo-overlay-title">conversation</span>
+      <button class="overlay-close" id="convo-overlay-close">esc to close</button>
+    </div>
+    <div class="overlay-content">
+      <div id="convo-messages"></div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let conversations = [];
+    let currentYear = new Date().getFullYear();
+    let currentMonth = new Date().getMonth();
+    let displayMode = 'messages'; // 'messages' or 'time'
+
+    // DOM elements
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const fileCount = document.getElementById('file-count');
+    const heatmap = document.getElementById('heatmap');
+    const monthLabel = document.getElementById('month-label');
+    const prevMonthBtn = document.getElementById('prev-month');
+    const nextMonthBtn = document.getElementById('next-month');
+    const statsBar = document.getElementById('stats-bar');
+    const dayOverlay = document.getElementById('day-overlay');
+    const convoOverlay = document.getElementById('convo-overlay');
+    const dayOverlayTitle = document.getElementById('day-overlay-title');
+    const convoOverlayTitle = document.getElementById('convo-overlay-title');
+    const convoList = document.getElementById('convo-list');
+    const convoMessages = document.getElementById('convo-messages');
+
+    // Month names
+    const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun',
+                        'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+    // Initialize
+    function init() {
+      setupDropZone();
+
+      setupMonthNav();
+      setupToggle();
+      setupOverlays();
+      renderHeatmap();
+    }
+
+
+
+    // Drop zone setup
+    function setupDropZone() {
+      dropZone.addEventListener('click', () => fileInput.click());
+
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      });
+
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        handleDrop(e.dataTransfer.items);
+      });
+
+      fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+    }
+
+    // Handle drop - supports folders
+    async function handleDrop(items) {
+      const files = [];
+
+      for (const item of items) {
+        const entry = item.webkitGetAsEntry();
+        if (entry) {
+          await traverseEntry(entry, files);
+        }
+      }
+
+      console.log('[drop] Found', files.length, 'JSONL files');
+      for (const file of files) {
+        readFile(file);
+      }
+    }
+
+    // Recursively traverse directory entries
+    async function traverseEntry(entry, files) {
+      if (entry.isFile) {
+        if (entry.name.endsWith('.jsonl')) {
+          const file = await getFile(entry);
+          files.push(file);
+        }
+      } else if (entry.isDirectory) {
+        const reader = entry.createReader();
+        const entries = await readAllEntries(reader);
+        for (const childEntry of entries) {
+          await traverseEntry(childEntry, files);
+        }
+      }
+    }
+
+    // Read all entries from a directory reader
+    function readAllEntries(reader) {
+      return new Promise((resolve) => {
+        const entries = [];
+        function readBatch() {
+          reader.readEntries((batch) => {
+            if (batch.length === 0) {
+              resolve(entries);
+            } else {
+              entries.push(...batch);
+              readBatch(); // Continue reading (directories can have many entries)
+            }
+          });
+        }
+        readBatch();
+      });
+    }
+
+    // Get File object from FileEntry
+    function getFile(fileEntry) {
+      return new Promise((resolve) => {
+        fileEntry.file(resolve);
+      });
+    }
+
+    // Parse JSONL files using FileReader
+    function handleFiles(files) {
+      for (const file of files) {
+        if (file.name.endsWith('.jsonl')) {
+          readFile(file);
+        }
+      }
+    }
+
+    // Read a single file
+    function readFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => parseFileContent(e.target.result);
+      reader.onerror = (e) => console.error('[error] Reading file:', file.name, e);
+      reader.readAsText(file);
+    }
+
+    // Parse file content and extract conversations
+    function parseFileContent(content) {
+      const lines = content.split('\n').filter(l => l.trim());
+
+      // Group messages by sessionId
+      const sessions = {};
+
+      for (const line of lines) {
+        try {
+          const data = JSON.parse(line);
+
+          if (data.type === 'user' || data.type === 'assistant') {
+            const sessionId = data.sessionId;
+            const uuid = data.uuid;
+
+            if (!sessions[sessionId]) {
+              sessions[sessionId] = {
+                id: sessionId,
+                messages: [],
+                seenUuids: new Set(),
+                startTime: null,
+                endTime: null
+              };
+            }
+
+            // Skip if we already have this message (dedupe by uuid)
+            if (sessions[sessionId].seenUuids.has(uuid)) {
+              continue;
+            }
+
+            const timestamp = new Date(data.timestamp);
+            const msgContent = extractContent(data.message);
+
+            if (msgContent) {
+              sessions[sessionId].seenUuids.add(uuid);
+              sessions[sessionId].messages.push({
+                role: data.type,
+                content: msgContent,
+                timestamp: timestamp
+              });
+
+              if (!sessions[sessionId].startTime || timestamp < sessions[sessionId].startTime) {
+                sessions[sessionId].startTime = timestamp;
+              }
+              if (!sessions[sessionId].endTime || timestamp > sessions[sessionId].endTime) {
+                sessions[sessionId].endTime = timestamp;
+              }
+            }
+          }
+        } catch (e) {
+          console.error('[parse] Error parsing line:', e.message);
+        }
+      }
+      // Merge sessions into conversations (avoid duplicates)
+      const existingIds = new Set(conversations.map(c => c.id));
+      for (const session of Object.values(sessions)) {
+        if (session.messages.length > 0 && !existingIds.has(session.id)) {
+          session.messages.sort((a, b) => a.timestamp - b.timestamp);
+          // Remove the seenUuids Set before storing (not needed anymore)
+          delete session.seenUuids;
+          conversations.push(session);
+          existingIds.add(session.id);
+        }
+      }
+
+      // Update UI
+      fileCount.textContent = `${conversations.length} conversations loaded`;
+      statsBar.style.display = 'flex';
+      updateStats();
+      renderHeatmap();
+    }
+
+    // Extract text content from message
+    function extractContent(message) {
+      if (!message || !message.content) {
+        return null;
+      }
+
+      if (typeof message.content === 'string') {
+        return message.content;
+      }
+
+      if (Array.isArray(message.content)) {
+        const textParts = message.content
+          .filter(c => c.type === 'text')
+          .map(c => c.text);
+        return textParts.length > 0 ? textParts.join('\n') : null;
+      }
+
+      return null;
+    }
+
+    // Update stats
+    function updateStats() {
+      const totalMessages = conversations.reduce((sum, c) => sum + c.messages.length, 0);
+      document.getElementById('stat-convos').textContent = conversations.length;
+      document.getElementById('stat-messages').textContent = totalMessages;
+
+      // Count conversations that have any message this month
+      const monthConvos = conversations.filter(c => {
+        return c.messages.some(m => {
+          const d = m.timestamp;
+          return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+        });
+      });
+      document.getElementById('stat-month').textContent = monthConvos.length;
+    }
+
+    // Month navigation
+    function setupMonthNav() {
+      prevMonthBtn.addEventListener('click', () => {
+        currentMonth--;
+        if (currentMonth < 0) {
+          currentMonth = 11;
+          currentYear--;
+        }
+        updateMonthLabel();
+        updateStats();
+        renderHeatmap();
+      });
+
+      nextMonthBtn.addEventListener('click', () => {
+        currentMonth++;
+        if (currentMonth > 11) {
+          currentMonth = 0;
+          currentYear++;
+        }
+        updateMonthLabel();
+        updateStats();
+        renderHeatmap();
+      });
+
+      updateMonthLabel();
+    }
+
+    function updateMonthLabel() {
+      monthLabel.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+    }
+
+    // Toggle setup
+    function setupToggle() {
+      const toggleOptions = document.querySelectorAll('.toggle-option');
+      toggleOptions.forEach(btn => {
+        btn.addEventListener('click', () => {
+          toggleOptions.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          displayMode = btn.dataset.mode;
+          renderHeatmap();
+        });
+      });
+    }
+
+    // Render heatmap
+    function renderHeatmap() {
+      heatmap.innerHTML = '';
+
+      // Get days in month
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+      // Build data grid - iterate individual messages
+      const grid = {};
+      let maxValue = 0;
+
+      for (const convo of conversations) {
+        for (const msg of convo.messages) {
+          const d = msg.timestamp;
+          if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+            const day = d.getDate();
+            const hour = d.getHours();
+            const key = `${day}-${hour}`;
+
+            if (!grid[key]) {
+              grid[key] = { messages: 0, time: 0 };
+            }
+
+            grid[key].messages++;
+          }
+        }
+
+        // Calculate time per hour block for this conversation
+        if (convo.messages.length >= 2) {
+          for (let i = 1; i < convo.messages.length; i++) {
+            const d = convo.messages[i].timestamp;
+            if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+              const gap = (convo.messages[i].timestamp - convo.messages[i - 1].timestamp) / 60000;
+              // Only count gaps under 30 min as active time
+              if (gap < 30) {
+                const day = d.getDate();
+                const hour = d.getHours();
+                const key = `${day}-${hour}`;
+                if (grid[key]) {
+                  grid[key].time += gap;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Find max for scaling
+      for (const key in grid) {
+        const val = displayMode === 'messages' ? grid[key].messages : grid[key].time;
+        if (val > maxValue) maxValue = val;
+      }
+
+      // Header row
+      const headerCorner = document.createElement('div');
+      headerCorner.className = 'heatmap-header';
+      heatmap.appendChild(headerCorner);
+
+      for (let h = 0; h < 24; h++) {
+        const header = document.createElement('div');
+        header.className = 'heatmap-header';
+        header.textContent = h.toString().padStart(2, '0');
+        heatmap.appendChild(header);
+      }
+
+      // Data rows
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayLabel = document.createElement('div');
+        dayLabel.className = 'day-label';
+        dayLabel.textContent = day;
+        heatmap.appendChild(dayLabel);
+
+        for (let hour = 0; hour < 24; hour++) {
+          const cell = document.createElement('div');
+          cell.className = 'heatmap-cell';
+
+          const key = `${day}-${hour}`;
+          const data = grid[key];
+
+          if (data) {
+            const val = displayMode === 'messages' ? data.messages : data.time;
+            const level = getHeatLevel(val, maxValue);
+            cell.classList.add(`heat-${level}`);
+
+            const tooltip = displayMode === 'messages'
+              ? `${data.messages} messages`
+              : `${Math.round(data.time)} min`;
+            cell.title = tooltip;
+          }
+
+          cell.addEventListener('click', () => showDayConversations(day));
+          heatmap.appendChild(cell);
+        }
+      }
+    }
+
+    // Get heat level (1-5) based on value
+    function getHeatLevel(value, max) {
+      if (!value || !max) return 0;
+      const ratio = value / max;
+      if (ratio < 0.2) return 1;
+      if (ratio < 0.4) return 2;
+      if (ratio < 0.6) return 3;
+      if (ratio < 0.8) return 4;
+      return 5;
+    }
+
+    // Show conversations for a day (any message on that day)
+    function showDayConversations(day) {
+      const dayConvos = conversations.filter(c => {
+        return c.messages.some(m => {
+          const d = m.timestamp;
+          return d.getFullYear() === currentYear &&
+                 d.getMonth() === currentMonth &&
+                 d.getDate() === day;
+        });
+      });
+
+      if (dayConvos.length === 0) {
+        return;
+      }
+
+      // Sort by time
+      dayConvos.sort((a, b) => a.startTime - b.startTime);
+
+      // Update title
+      const dateStr = `${monthNames[currentMonth]} ${day}, ${currentYear}`;
+      dayOverlayTitle.textContent = `${dateStr} - ${dayConvos.length} conversation${dayConvos.length > 1 ? 's' : ''}`;
+
+      // Render list
+      convoList.innerHTML = '';
+      for (const convo of dayConvos) {
+        const item = document.createElement('div');
+        item.className = 'convo-item';
+
+        const time = convo.startTime.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+
+        const firstUserMsg = convo.messages.find(m => m.role === 'user');
+        const preview = firstUserMsg ? firstUserMsg.content.slice(0, 100) : '(no preview)';
+
+        const duration = convo.endTime && convo.startTime
+          ? Math.round((convo.endTime - convo.startTime) / 60000)
+          : 0;
+
+        item.innerHTML = `
+          <div class="convo-time">${time}</div>
+          <div class="convo-preview">${escapeHtml(preview)}${preview.length >= 100 ? '...' : ''}</div>
+          <div class="convo-meta">${convo.messages.length} messages${duration > 0 ? ` / ${duration} min` : ''}</div>
+        `;
+
+        item.addEventListener('click', () => showConversation(convo));
+        convoList.appendChild(item);
+      }
+
+      dayOverlay.classList.add('active');
+    }
+
+    // Show full conversation
+    function showConversation(convo) {
+      const time = convo.startTime.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      const dateStr = `${monthNames[convo.startTime.getMonth()]} ${convo.startTime.getDate()}, ${convo.startTime.getFullYear()}`;
+      convoOverlayTitle.textContent = `${dateStr} at ${time}`;
+
+      convoMessages.innerHTML = '';
+
+      for (const msg of convo.messages) {
+        const msgEl = document.createElement('div');
+        msgEl.className = 'message';
+
+        msgEl.innerHTML = `
+          <div class="message-role ${msg.role}">${msg.role}</div>
+          <div class="message-content">${escapeHtml(msg.content)}</div>
+        `;
+
+        convoMessages.appendChild(msgEl);
+      }
+
+      convoOverlay.classList.add('active');
+    }
+
+    // Overlays setup
+    function setupOverlays() {
+      // Close buttons
+      document.getElementById('day-overlay-close').addEventListener('click', () => {
+        dayOverlay.classList.remove('active');
+      });
+
+      document.getElementById('convo-overlay-close').addEventListener('click', () => {
+        convoOverlay.classList.remove('active');
+      });
+
+      // ESC key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (convoOverlay.classList.contains('active')) {
+            convoOverlay.classList.remove('active');
+          } else if (dayOverlay.classList.contains('active')) {
+            dayOverlay.classList.remove('active');
+          }
+        }
+      });
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Start
+    init();
+  </script>
+</body>
+</html>
