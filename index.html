@@ -699,6 +699,157 @@
       margin-top: 6px;
     }
 
+    /* View mode toggle */
+    .view-mode-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .view-mode-label {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      text-transform: lowercase;
+      letter-spacing: 0.05em;
+      transition: color 0.15s ease;
+    }
+
+    .view-mode-label.active-label {
+      color: var(--text-primary);
+    }
+
+    .slide-toggle {
+      position: relative;
+      width: 32px;
+      height: 16px;
+      background: var(--canvas-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .slide-toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 10px;
+      height: 10px;
+      background: #a78bfa;
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+    }
+
+    .slide-toggle.toggled::after {
+      transform: translateX(16px);
+    }
+
+    /* Project ranking */
+    .project-ranking {
+      margin-bottom: 24px;
+    }
+
+    .project-ranking-title {
+      font-size: 11px;
+      text-transform: lowercase;
+      letter-spacing: 0.15em;
+      color: var(--text-tertiary);
+      margin-bottom: 10px;
+    }
+
+    .project-rank-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .project-rank-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--canvas-surface);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+    }
+
+    .project-rank-item:hover {
+      border-color: var(--border-strong);
+    }
+
+    .project-rank-item.active {
+      border-color: #a78bfa;
+      background: #a78bfa08;
+    }
+
+    .project-rank-pos {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      width: 16px;
+      text-align: right;
+    }
+
+    .project-rank-name {
+      font-size: 11px;
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    .project-rank-bar {
+      flex: 1;
+      height: 3px;
+      background: var(--canvas-elevated);
+      overflow: hidden;
+      max-width: 200px;
+    }
+
+    .project-rank-bar-fill {
+      height: 100%;
+      background: #a78bfa;
+      transition: width 0.3s ease;
+    }
+
+    .project-rank-msgs {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      min-width: 60px;
+      text-align: right;
+      letter-spacing: 0.05em;
+    }
+
+    /* Collapsible section headers */
+    .section-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .section-toggle:hover .toggle-arrow {
+      color: var(--text-secondary);
+    }
+
+    .toggle-arrow {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      transition: transform 0.2s ease, color 0.15s ease;
+      display: inline-block;
+      width: 12px;
+    }
+
+    .toggle-arrow.collapsed {
+      transform: rotate(-90deg);
+    }
+
+    .section-body.collapsed {
+      display: none;
+    }
+
     /* Empty state */
     .empty-state {
       text-align: center;
@@ -754,38 +905,55 @@
       </div>
     </div>
 
-    <div class="weekly-summary" id="weekly-summary" style="display: none;">
-      <div class="weekly-summary-title">weekly summary</div>
-      <div class="week-cards" id="week-cards"></div>
-    </div>
-
-    <div class="toggle-container">
-      <span class="toggle-label">show:</span>
-      <div class="toggle-switch">
-        <button class="toggle-option active" data-mode="messages">messages</button>
-        <button class="toggle-option" data-mode="time">time</button>
+    <div class="project-ranking" id="project-ranking" style="display: none;">
+      <div class="project-ranking-title section-toggle" onclick="toggleSection('projects')">
+        <span class="toggle-arrow" id="arrow-projects">▼</span>
+        <span id="projects-title-text">projects this month</span>
+      </div>
+      <div class="section-body" id="body-projects">
+        <div class="view-mode-toggle" id="view-mode-toggle">
+          <span class="view-mode-label active-label" id="label-grouped">grouped</span>
+          <div class="slide-toggle" id="view-mode-slider" onclick="toggleViewMode()"></div>
+          <span class="view-mode-label" id="label-specific">specific</span>
+          <span style="width:1px;height:14px;background:var(--border);margin:0 6px;flex-shrink:0"></span>
+          <span class="view-mode-label active-label" id="label-month">this month</span>
+          <div class="slide-toggle" id="time-range-slider" onclick="toggleTimeRange()"></div>
+          <span class="view-mode-label" id="label-alltime">all time</span>
+        </div>
+        <div class="project-rank-list" id="project-rank-list"></div>
       </div>
     </div>
 
-    <div class="filter-bar" id="filter-bar" style="display: none;">
-      <span class="filter-label">filtered:</span>
-      <span class="filter-project" id="filter-project"></span>
-      <button class="filter-clear" id="filter-clear">clear</button>
+    <div class="weekly-summary" id="weekly-summary" style="display: none;">
+      <div class="weekly-summary-title section-toggle" onclick="toggleSection('weekly')">
+        <span class="toggle-arrow" id="arrow-weekly">▼</span>
+        weekly summary
+      </div>
+      <div class="section-body" id="body-weekly">
+        <div class="week-cards" id="week-cards"></div>
+      </div>
     </div>
 
-    <div class="heatmap-container" id="heatmap-container">
-      <div class="heatmap" id="heatmap"></div>
-      <div class="legend">
-        <span class="legend-label">less</span>
-        <div class="legend-scale">
-          <div class="legend-box" style="background: var(--heat-0);"></div>
-          <div class="legend-box" style="background: var(--heat-1);"></div>
-          <div class="legend-box" style="background: var(--heat-2);"></div>
-          <div class="legend-box" style="background: var(--heat-3);"></div>
-          <div class="legend-box" style="background: var(--heat-4);"></div>
-          <div class="legend-box" style="background: var(--heat-5);"></div>
-        </div>
-        <span class="legend-label">more</span>
+    <div class="toggle-container section-toggle" onclick="toggleSection('heatmap')">
+      <span class="toggle-arrow" id="arrow-heatmap">▼</span>
+      <span class="toggle-label">heatmap:</span>
+      <div class="toggle-switch" onclick="event.stopPropagation()">
+        <button class="toggle-option active" data-mode="messages">messages</button>
+        <button class="toggle-option" data-mode="time">time</button>
+        <button class="toggle-option" data-mode="projects">projects</button>
+      </div>
+    </div>
+
+    <div class="section-body" id="body-heatmap">
+      <div class="filter-bar" id="filter-bar" style="display: none;">
+        <span class="filter-label">filtered:</span>
+        <span class="filter-project" id="filter-project"></span>
+        <button class="filter-clear" id="filter-clear">clear</button>
+      </div>
+
+      <div class="heatmap-container" id="heatmap-container">
+        <div class="heatmap" id="heatmap"></div>
+        <div class="legend" id="heatmap-legend"></div>
       </div>
     </div>
   </div>
@@ -823,6 +991,8 @@
     let currentMonth = new Date().getMonth();
     let displayMode = 'messages'; // 'messages' or 'time'
     let selectedProject = null; // null = show all
+    let projectViewMode = 'grouped'; // 'grouped' or 'specific'
+    let rankingTimeRange = 'month'; // 'month' or 'alltime'
 
     // DOM elements
     const dropZone = document.getElementById('drop-zone');
@@ -844,6 +1014,23 @@
     const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun',
                         'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
+    // Project color palette
+    const projectColorPalette = [
+      '#a78bfa', '#6ee7b7', '#60a5fa', '#fb923c', '#f472b6',
+      '#fbbf24', '#22d3ee', '#f87171', '#2dd4bf', '#818cf8',
+      '#a3e635', '#e879f9', '#38bdf8', '#fb7185', '#34d399'
+    ];
+    const projectColorMap = {};
+    let nextColorIdx = 0;
+
+    function getProjectColor(projKey) {
+      if (!projectColorMap[projKey]) {
+        projectColorMap[projKey] = projectColorPalette[nextColorIdx % projectColorPalette.length];
+        nextColorIdx++;
+      }
+      return projectColorMap[projKey];
+    }
+
     // Initialize
     function init() {
       setupDropZone();
@@ -851,7 +1038,59 @@
       setupToggle();
       setupOverlays();
       setupFilter();
+      restoreSectionStates();
       renderHeatmap();
+    }
+
+    // Collapsible sections with cookie persistence
+    function toggleSection(name) {
+      const arrow = document.getElementById(`arrow-${name}`);
+      const body = document.getElementById(`body-${name}`);
+      const isCollapsed = body.classList.toggle('collapsed');
+      arrow.classList.toggle('collapsed', isCollapsed);
+      saveSectionStates();
+    }
+
+    function saveSectionStates() {
+      const states = {};
+      ['projects', 'weekly', 'heatmap'].forEach(name => {
+        const body = document.getElementById(`body-${name}`);
+        if (body) states[name] = body.classList.contains('collapsed');
+      });
+      states.viewMode = projectViewMode;
+      states.timeRange = rankingTimeRange;
+      document.cookie = `sectionStates=${JSON.stringify(states)};path=/;max-age=31536000`;
+    }
+
+    function restoreSectionStates() {
+      const match = document.cookie.match(/sectionStates=([^;]+)/);
+      if (!match) return;
+      try {
+        const states = JSON.parse(match[1]);
+        for (const [name, value] of Object.entries(states)) {
+          if (name === 'viewMode') {
+            if (value === 'grouped' || value === 'specific') {
+              projectViewMode = value;
+            }
+            continue;
+          }
+          if (name === 'timeRange') {
+            if (value === 'month' || value === 'alltime') {
+              rankingTimeRange = value;
+            }
+            continue;
+          }
+          if (value) {
+            const arrow = document.getElementById(`arrow-${name}`);
+            const body = document.getElementById(`body-${name}`);
+            if (arrow && body) {
+              body.classList.add('collapsed');
+              arrow.classList.add('collapsed');
+            }
+          }
+        }
+        updateViewModeUI();
+      } catch (e) {}
     }
 
     // Project filter
@@ -870,11 +1109,123 @@
         document.getElementById('filter-project').textContent = project;
         document.getElementById('filter-bar').style.display = 'flex';
       }
+      renderProjectRanking();
       renderWeeklySummary();
       renderHeatmap();
     }
 
+    // Project grouping
+    function computeProjectGroups() {
+      const allPaths = [...new Set(conversations.filter(c => c.projectPath).map(c => c.projectPath))];
+      allPaths.sort((a, b) => a.split('/').length - b.split('/').length);
 
+      // Iteratively find roots, excluding over-broad directories (home/workspace dirs)
+      const excluded = new Set();
+      let roots = [];
+
+      for (let iter = 0; iter < 5; iter++) {
+        roots = [];
+        for (const p of allPaths) {
+          if (excluded.has(p)) continue;
+          const isChild = roots.some(root => p.startsWith(root + '/'));
+          if (!isChild) roots.push(p);
+        }
+
+        // Check each root: if it has 10+ descendant project paths, it's a
+        // workspace/home directory, not a real project — exclude it
+        let foundBroad = false;
+        for (const root of roots) {
+          const descendants = allPaths.filter(p => p !== root && p.startsWith(root + '/'));
+          if (descendants.length >= 10) {
+            excluded.add(root);
+            foundBroad = true;
+          }
+        }
+        if (!foundBroad) break;
+      }
+
+      // Assign groups based on final roots
+      for (const convo of conversations) {
+        if (!convo.projectPath) continue;
+
+        const root = roots.find(r => convo.projectPath === r || convo.projectPath.startsWith(r + '/'));
+
+        if (root) {
+          const rootParts = root.split('/');
+          const rootName = rootParts[rootParts.length - 1] || rootParts[rootParts.length - 2];
+          convo.projectGroup = rootName;
+
+          if (convo.projectPath === root) {
+            convo.projectGroupedName = rootName;
+          } else {
+            const relativePath = convo.projectPath.slice(root.length + 1);
+            convo.projectGroupedName = rootName + '/' + relativePath;
+          }
+        } else {
+          // Excluded path or orphan — standalone project
+          convo.projectGroup = convo.project;
+          convo.projectGroupedName = convo.project;
+        }
+      }
+    }
+
+    function getProjectKey(convo) {
+      if (projectViewMode === 'specific') return convo.project;
+      return convo.projectGroup || convo.project;
+    }
+
+    function toggleViewMode() {
+      projectViewMode = projectViewMode === 'grouped' ? 'specific' : 'grouped';
+      selectedProject = null;
+      document.getElementById('filter-bar').style.display = 'none';
+      updateViewModeUI();
+      saveSectionStates();
+      updateStats();
+      renderProjectRanking();
+      renderWeeklySummary();
+      renderHeatmap();
+    }
+
+    function toggleTimeRange() {
+      rankingTimeRange = rankingTimeRange === 'month' ? 'alltime' : 'month';
+      updateViewModeUI();
+      saveSectionStates();
+      renderProjectRanking();
+    }
+
+    function updateViewModeUI() {
+      const slider = document.getElementById('view-mode-slider');
+      const labelGrouped = document.getElementById('label-grouped');
+      const labelSpecific = document.getElementById('label-specific');
+      if (slider && labelGrouped && labelSpecific) {
+        if (projectViewMode === 'specific') {
+          slider.classList.add('toggled');
+          labelGrouped.classList.remove('active-label');
+          labelSpecific.classList.add('active-label');
+        } else {
+          slider.classList.remove('toggled');
+          labelGrouped.classList.add('active-label');
+          labelSpecific.classList.remove('active-label');
+        }
+      }
+      const timeSlider = document.getElementById('time-range-slider');
+      const labelMonth = document.getElementById('label-month');
+      const labelAlltime = document.getElementById('label-alltime');
+      const titleText = document.getElementById('projects-title-text');
+      if (timeSlider && labelMonth && labelAlltime) {
+        if (rankingTimeRange === 'alltime') {
+          timeSlider.classList.add('toggled');
+          labelMonth.classList.remove('active-label');
+          labelAlltime.classList.add('active-label');
+          if (titleText) titleText.textContent = 'projects all time';
+        } else {
+          timeSlider.classList.remove('toggled');
+          labelMonth.classList.add('active-label');
+          labelAlltime.classList.remove('active-label');
+          if (titleText) titleText.textContent = 'projects this month';
+        }
+      }
+    }
 
     // Drop zone setup
     function setupDropZone() {
@@ -1000,6 +1351,7 @@
               sessions[sessionId] = {
                 id: sessionId,
                 project: null,
+                projectPath: null,
                 messages: [],
                 seenUuids: new Set(),
                 startTime: null,
@@ -1008,7 +1360,8 @@
             }
 
             // Extract project from cwd
-            if (data.cwd && !sessions[sessionId].project) {
+            if (data.cwd && !sessions[sessionId].projectPath) {
+              sessions[sessionId].projectPath = data.cwd;
               const parts = data.cwd.split('/');
               sessions[sessionId].project = parts[parts.length - 1] || parts[parts.length - 2] || data.cwd;
             }
@@ -1061,6 +1414,7 @@
           if (session.startTime < existing.startTime) existing.startTime = session.startTime;
           if (session.endTime > existing.endTime) existing.endTime = session.endTime;
           if (!existing.project && session.project) existing.project = session.project;
+          if (!existing.projectPath && session.projectPath) existing.projectPath = session.projectPath;
         } else {
           session.messages.sort((a, b) => a.timestamp - b.timestamp);
           delete session.seenUuids;
@@ -1068,10 +1422,13 @@
         }
       }
 
+      computeProjectGroups();
+
       // Update UI
       fileCount.textContent = `${conversations.length} conversations loaded`;
       statsBar.style.display = 'flex';
       updateStats();
+      renderProjectRanking();
       renderWeeklySummary();
       renderHeatmap();
     }
@@ -1111,7 +1468,7 @@
       });
       document.getElementById('stat-month').textContent = monthConvos.length;
 
-      const projects = new Set(conversations.map(c => c.project).filter(Boolean));
+      const projects = new Set(conversations.map(c => getProjectKey(c)).filter(Boolean));
       document.getElementById('stat-projects').textContent = projects.size;
     }
 
@@ -1146,6 +1503,56 @@
       return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
 
+    function renderProjectRanking() {
+      const container = document.getElementById('project-ranking');
+      const listEl = document.getElementById('project-rank-list');
+
+      if (conversations.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+
+      // Count messages per project
+      const projectMessages = {};
+      for (const convo of conversations) {
+        const projKey = getProjectKey(convo);
+        if (!projKey) continue;
+        for (const msg of convo.messages) {
+          if (rankingTimeRange === 'month') {
+            const d = msg.timestamp;
+            if (d.getFullYear() !== currentYear || d.getMonth() !== currentMonth) continue;
+          }
+          if (!projectMessages[projKey]) projectMessages[projKey] = 0;
+          projectMessages[projKey]++;
+        }
+      }
+
+      // Sort by message count descending
+      const ranked = Object.entries(projectMessages).sort((a, b) => b[1] - a[1]);
+
+      if (ranked.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+
+      const maxMsgs = ranked[0][1];
+      let html = '';
+      for (let i = 0; i < ranked.length; i++) {
+        const [name, msgs] = ranked[i];
+        const pct = maxMsgs > 0 ? Math.round((msgs / maxMsgs) * 100) : 0;
+        const isActive = selectedProject === name;
+        html += `<div class="project-rank-item${isActive ? ' active' : ''}" onclick="toggleProjectFilter('${escapeHtml(name)}')">`;
+        html += `<span class="project-rank-pos">${i + 1}</span>`;
+        html += `<span class="project-rank-name">${escapeHtml(name)}</span>`;
+        html += `<div class="project-rank-bar"><div class="project-rank-bar-fill" style="width:${pct}%"></div></div>`;
+        html += `<span class="project-rank-msgs">${msgs} msgs</span>`;
+        html += `</div>`;
+      }
+
+      listEl.innerHTML = html;
+      container.style.display = '';
+    }
+
     function renderWeeklySummary() {
       const container = document.getElementById('weekly-summary');
       const cardsEl = document.getElementById('week-cards');
@@ -1170,7 +1577,8 @@
             }
             weeks[wk].messages++;
             weeks[wk].convos.add(convo.id);
-            if (convo.project) weeks[wk].projects.add(convo.project);
+            const projKey = getProjectKey(convo);
+            if (projKey) weeks[wk].projects.add(projKey);
 
             const dk = getDayKey(d);
             if (!weeks[wk].days[dk]) {
@@ -1192,11 +1600,12 @@
       // Find the first week each project ever appeared (across all data)
       const projectFirstWeek = {};
       for (const convo of conversations) {
-        if (!convo.project) continue;
+        const pfKey = getProjectKey(convo);
+        if (!pfKey) continue;
         for (const msg of convo.messages) {
           const wk = getWeekKey(msg.timestamp);
-          if (!projectFirstWeek[convo.project] || wk < projectFirstWeek[convo.project]) {
-            projectFirstWeek[convo.project] = wk;
+          if (!projectFirstWeek[pfKey] || wk < projectFirstWeek[pfKey]) {
+            projectFirstWeek[pfKey] = wk;
           }
         }
       }
@@ -1267,6 +1676,7 @@
         }
         updateMonthLabel();
         updateStats();
+        renderProjectRanking();
         renderWeeklySummary();
         renderHeatmap();
       });
@@ -1279,6 +1689,7 @@
         }
         updateMonthLabel();
         updateStats();
+        renderProjectRanking();
         renderWeeklySummary();
         renderHeatmap();
       });
@@ -1316,7 +1727,7 @@
 
       // Collect all messages for this month, sorted globally (respecting project filter)
       const filteredConvos = selectedProject
-        ? conversations.filter(c => c.project === selectedProject)
+        ? conversations.filter(c => getProjectKey(c) === selectedProject)
         : conversations;
       const monthMessages = [];
       for (const convo of filteredConvos) {
@@ -1334,7 +1745,8 @@
             }
 
             grid[key].messages++;
-            if (convo.project) grid[key].projects.add(convo.project);
+            const hpk = getProjectKey(convo);
+            if (hpk) grid[key].projects.add(hpk);
           }
         }
       }
@@ -1356,7 +1768,9 @@
 
       // Find max for scaling
       for (const key in grid) {
-        const val = displayMode === 'messages' ? grid[key].messages : grid[key].time;
+        const val = displayMode === 'messages' ? grid[key].messages
+                  : displayMode === 'projects' ? grid[key].projects.size
+                  : grid[key].time;
         if (val > maxValue) maxValue = val;
       }
 
@@ -1388,23 +1802,67 @@
           const data = grid[key];
 
           if (data) {
-            const val = displayMode === 'messages' ? data.messages : data.time;
-            const level = getHeatLevel(val, maxValue);
-            cell.classList.add(`heat-${level}`);
-
             const projCount = data.projects.size;
             const projNames = projCount > 0 ? Array.from(data.projects).join(', ') : '';
-            const msgInfo = displayMode === 'messages'
-              ? `${data.messages} messages`
-              : `${Math.round(data.time)} min`;
-            cell.title = projCount > 0
-              ? `${msgInfo} / ${projCount} project${projCount > 1 ? 's' : ''}: ${projNames}`
-              : msgInfo;
+
+            if (displayMode === 'projects' && projCount > 0) {
+              const colors = Array.from(data.projects).map(p => getProjectColor(p));
+              if (colors.length === 1) {
+                cell.style.background = colors[0];
+              } else {
+                const pct = 100 / colors.length;
+                const stops = colors.map((c, i) => `${c} ${i * pct}% ${(i + 1) * pct}%`).join(', ');
+                cell.style.background = `linear-gradient(135deg, ${stops})`;
+              }
+              cell.title = `${projNames} — ${data.messages} msgs`;
+            } else {
+              const val = displayMode === 'messages' ? data.messages : data.time;
+              const level = getHeatLevel(val, maxValue);
+              cell.classList.add(`heat-${level}`);
+              const msgInfo = displayMode === 'messages'
+                ? `${data.messages} messages`
+                : `${Math.round(data.time)} min`;
+              cell.title = projNames
+                ? `${msgInfo} — ${projNames}`
+                : msgInfo;
+            }
           }
 
           cell.addEventListener('click', () => showDayConversations(day));
           heatmap.appendChild(cell);
         }
+      }
+
+      // Render legend
+      const legendEl = document.getElementById('heatmap-legend');
+      if (displayMode === 'projects') {
+        const monthProjects = new Set();
+        for (const key in grid) {
+          for (const p of grid[key].projects) monthProjects.add(p);
+        }
+        let lhtml = '';
+        for (const p of monthProjects) {
+          const c = getProjectColor(p);
+          lhtml += `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;cursor:pointer" onclick="toggleProjectFilter('${escapeHtml(p)}')">`;
+          lhtml += `<span style="width:10px;height:10px;background:${c};flex-shrink:0"></span>`;
+          lhtml += `<span class="legend-label" style="color:${selectedProject === p ? '#fff' : ''}">${escapeHtml(p)}</span>`;
+          lhtml += `</span>`;
+        }
+        legendEl.innerHTML = lhtml;
+        legendEl.style.flexWrap = 'wrap';
+      } else {
+        legendEl.innerHTML = `
+          <span class="legend-label">less</span>
+          <div class="legend-scale">
+            <div class="legend-box" style="background: var(--heat-0);"></div>
+            <div class="legend-box" style="background: var(--heat-1);"></div>
+            <div class="legend-box" style="background: var(--heat-2);"></div>
+            <div class="legend-box" style="background: var(--heat-3);"></div>
+            <div class="legend-box" style="background: var(--heat-4);"></div>
+            <div class="legend-box" style="background: var(--heat-5);"></div>
+          </div>
+          <span class="legend-label">more</span>`;
+        legendEl.style.flexWrap = '';
       }
     }
 
@@ -1422,7 +1880,7 @@
     // Show conversations for a day (any message on that day, respecting project filter)
     function showDayConversations(day) {
       const source = selectedProject
-        ? conversations.filter(c => c.project === selectedProject)
+        ? conversations.filter(c => getProjectKey(c) === selectedProject)
         : conversations;
       const dayConvos = source.filter(c => {
         return c.messages.some(m => {
@@ -1463,7 +1921,8 @@
           ? Math.round((convo.endTime - convo.startTime) / 60000)
           : 0;
 
-        const projectTag = convo.project ? `<span class="convo-project">${escapeHtml(convo.project)}</span>` : '';
+        const projDisplay = convo.projectGroupedName || convo.project;
+        const projectTag = projDisplay ? `<span class="convo-project">${escapeHtml(projDisplay)}</span>` : '';
 
         item.innerHTML = `
           <div class="convo-time">${time}</div>
@@ -1488,7 +1947,8 @@
         hour12: false
       });
       const dateStr = `${monthNames[convo.startTime.getMonth()]} ${convo.startTime.getDate()}, ${convo.startTime.getFullYear()}`;
-      const projectStr = convo.project ? ` — ${convo.project}` : '';
+      const projName = convo.projectGroupedName || convo.project;
+      const projectStr = projName ? ` — ${projName}` : '';
       convoOverlayTitle.textContent = `${dateStr} at ${time}${projectStr}`;
 
       convoMessages.innerHTML = '';
