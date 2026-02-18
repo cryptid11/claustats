@@ -460,6 +460,175 @@
       color: var(--text-primary);
     }
 
+    /* Weekly summary */
+    .weekly-summary {
+      margin-bottom: 24px;
+    }
+
+    .weekly-summary-title {
+      font-size: 11px;
+      text-transform: lowercase;
+      letter-spacing: 0.15em;
+      color: var(--text-tertiary);
+      margin-bottom: 10px;
+    }
+
+    .week-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .week-card {
+      background: var(--canvas-surface);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 16px;
+      align-items: center;
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+    }
+
+    .week-card:hover {
+      border-color: var(--border-strong);
+    }
+
+    .week-label {
+      font-size: 11px;
+      color: var(--text-primary);
+      letter-spacing: 0.05em;
+    }
+
+    .week-stats {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .week-stat {
+      text-align: right;
+    }
+
+    .week-stat .num {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--accent-primary);
+      line-height: 1;
+    }
+
+    .week-stat .lbl {
+      font-size: 9px;
+      color: var(--text-tertiary);
+      text-transform: lowercase;
+      letter-spacing: 0.08em;
+    }
+
+    .week-bar-track {
+      grid-column: 1 / -1;
+      height: 3px;
+      background: var(--canvas-elevated);
+      overflow: hidden;
+    }
+
+    .week-bar-fill {
+      height: 100%;
+      background: var(--accent-primary);
+      transition: width 0.4s ease;
+    }
+
+    .week-days {
+      grid-column: 1 / -1;
+      display: none;
+      flex-direction: column;
+      gap: 3px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+
+    .week-days.open {
+      display: flex;
+    }
+
+    .day-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 2px 0;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .day-bar-row:hover {
+      background: var(--canvas-elevated);
+    }
+
+    .day-bar-label {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      width: 28px;
+      text-align: right;
+      flex-shrink: 0;
+      text-transform: lowercase;
+    }
+
+    .day-bar-track-inner {
+      flex: 1;
+      height: 4px;
+      background: var(--canvas-elevated);
+      overflow: hidden;
+    }
+
+    .day-bar-fill-inner {
+      height: 100%;
+      background: var(--heat-2);
+      transition: width 0.3s ease;
+    }
+
+    .day-bar-count {
+      font-size: 9px;
+      color: var(--text-tertiary);
+      width: 70px;
+      flex-shrink: 0;
+      letter-spacing: 0.05em;
+    }
+
+    /* Project tags */
+    .week-projects {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .project-tag {
+      font-size: 9px;
+      color: #a78bfa;
+      background: #a78bfa10;
+      border: 1px solid #a78bfa20;
+      padding: 2px 8px;
+      letter-spacing: 0.05em;
+    }
+
+    .project-tag.new {
+      color: #6ee7b7;
+      background: #6ee7b710;
+      border-color: #6ee7b730;
+    }
+
+    .convo-project {
+      font-size: 10px;
+      color: #a78bfa;
+      background: #a78bfa10;
+      border: 1px solid #a78bfa20;
+      padding: 2px 8px;
+      display: inline-block;
+      letter-spacing: 0.05em;
+      margin-top: 6px;
+    }
+
     /* Empty state */
     .empty-state {
       text-align: center;
@@ -469,14 +638,15 @@
       letter-spacing: 0.1em;
     }
 
-    /* Hidden file input */
-    #file-input {
+    /* Hidden file inputs */
+    #file-input, #folder-input {
       display: none;
     }
   </style>
 </head>
 <body>
   <input type="file" id="file-input" multiple accept=".jsonl,.json">
+  <input type="file" id="folder-input" webkitdirectory>
 
   <div class="container">
     <div class="header">
@@ -508,6 +678,15 @@
         <span class="stat-label">this month:</span>
         <span class="stat-value" id="stat-month">0</span>
       </div>
+      <div class="stat-item">
+        <span class="stat-label">projects:</span>
+        <span class="stat-value" id="stat-projects">0</span>
+      </div>
+    </div>
+
+    <div class="weekly-summary" id="weekly-summary" style="display: none;">
+      <div class="weekly-summary-title">weekly summary</div>
+      <div class="week-cards" id="week-cards"></div>
     </div>
 
     <div class="toggle-container">
@@ -598,7 +777,15 @@
 
     // Drop zone setup
     function setupDropZone() {
-      dropZone.addEventListener('click', () => fileInput.click());
+      const folderInput = document.getElementById('folder-input');
+      dropZone.addEventListener('click', () => folderInput.click());
+      folderInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files).filter(f => f.name.endsWith('.jsonl'));
+        console.log('[import] Found', files.length, 'JSONL files in folder');
+        for (const file of files) {
+          readFile(file);
+        }
+      });
 
       dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -711,11 +898,18 @@
             if (!sessions[sessionId]) {
               sessions[sessionId] = {
                 id: sessionId,
+                project: null,
                 messages: [],
                 seenUuids: new Set(),
                 startTime: null,
                 endTime: null
               };
+            }
+
+            // Extract project from cwd
+            if (data.cwd && !sessions[sessionId].project) {
+              const parts = data.cwd.split('/');
+              sessions[sessionId].project = parts[parts.length - 1] || parts[parts.length - 2] || data.cwd;
             }
 
             // Skip if we already have this message (dedupe by uuid)
@@ -762,6 +956,7 @@
       fileCount.textContent = `${conversations.length} conversations loaded`;
       statsBar.style.display = 'flex';
       updateStats();
+      renderWeeklySummary();
       renderHeatmap();
     }
 
@@ -799,6 +994,148 @@
         });
       });
       document.getElementById('stat-month').textContent = monthConvos.length;
+
+      const projects = new Set(conversations.map(c => c.project).filter(Boolean));
+      document.getElementById('stat-projects').textContent = projects.size;
+    }
+
+    // Weekly summary
+    const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+    function getWeekKey(date) {
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      const day = d.getDay() || 7;
+      d.setDate(d.getDate() + 4 - day);
+      const yearStart = new Date(d.getFullYear(), 0, 1);
+      const weekNum = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+      return d.getFullYear() + '-W' + String(weekNum).padStart(2, '0');
+    }
+
+    function getWeekRange(date) {
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      const day = d.getDay() || 7;
+      const mon = new Date(d);
+      mon.setDate(d.getDate() - day + 1);
+      const sun = new Date(mon);
+      sun.setDate(mon.getDate() + 6);
+      const opts = { month: 'short', day: 'numeric' };
+      return mon.toLocaleDateString('en-US', opts).toLowerCase() + ' – ' +
+             sun.toLocaleDateString('en-US', opts).toLowerCase() + ', ' + sun.getFullYear();
+    }
+
+    function getDayKey(date) {
+      const d = new Date(date);
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    function renderWeeklySummary() {
+      const container = document.getElementById('weekly-summary');
+      const cardsEl = document.getElementById('week-cards');
+
+      if (conversations.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+
+      // Only show weeks for the current month
+      const weeks = {};
+      const weekOrder = [];
+
+      for (const convo of conversations) {
+        for (const msg of convo.messages) {
+          const d = msg.timestamp;
+          if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+            const wk = getWeekKey(d);
+            if (!weeks[wk]) {
+              weeks[wk] = { messages: 0, convos: new Set(), projects: new Set(), range: getWeekRange(d), days: {} };
+              weekOrder.push(wk);
+            }
+            weeks[wk].messages++;
+            weeks[wk].convos.add(convo.id);
+            if (convo.project) weeks[wk].projects.add(convo.project);
+
+            const dk = getDayKey(d);
+            if (!weeks[wk].days[dk]) {
+              weeks[wk].days[dk] = { messages: 0, convos: new Set(), dow: d.getDay() };
+            }
+            weeks[wk].days[dk].messages++;
+            weeks[wk].days[dk].convos.add(convo.id);
+          }
+        }
+      }
+
+      weekOrder.sort();
+
+      if (weekOrder.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+
+      // Find the first week each project ever appeared (across all data)
+      const projectFirstWeek = {};
+      for (const convo of conversations) {
+        if (!convo.project) continue;
+        for (const msg of convo.messages) {
+          const wk = getWeekKey(msg.timestamp);
+          if (!projectFirstWeek[convo.project] || wk < projectFirstWeek[convo.project]) {
+            projectFirstWeek[convo.project] = wk;
+          }
+        }
+      }
+
+      // Find max for bar scaling
+      let maxMessages = 0;
+      let maxDayMessages = 0;
+      for (const wk of weekOrder) {
+        if (weeks[wk].messages > maxMessages) maxMessages = weeks[wk].messages;
+        for (const dk in weeks[wk].days) {
+          if (weeks[wk].days[dk].messages > maxDayMessages) maxDayMessages = weeks[wk].days[dk].messages;
+        }
+      }
+
+      let html = '';
+      for (const wk of weekOrder) {
+        const data = weeks[wk];
+        const barPct = maxMessages > 0 ? Math.round((data.messages / maxMessages) * 100) : 0;
+        const convoCount = data.convos.size;
+
+        html += `<div class="week-card" onclick="this.querySelector('.week-days').classList.toggle('open')">`;
+        html += `<div class="week-label">${data.range}</div>`;
+        html += `<div class="week-stats">`;
+        html += `<div class="week-stat"><div class="num">${convoCount}</div><div class="lbl">convos</div></div>`;
+        html += `<div class="week-stat"><div class="num">${data.messages}</div><div class="lbl">messages</div></div>`;
+        html += `</div>`;
+        html += `<div class="week-bar-track"><div class="week-bar-fill" style="width:${barPct}%"></div></div>`;
+
+        // Project tags
+        if (data.projects.size > 0) {
+          html += `<div class="week-projects">`;
+          for (const proj of data.projects) {
+            const isNew = projectFirstWeek[proj] === wk;
+            html += `<span class="project-tag${isNew ? ' new' : ''}">${escapeHtml(proj)}${isNew ? ' ✱' : ''}</span>`;
+          }
+          html += `</div>`;
+        }
+
+        // Daily breakdown
+        html += `<div class="week-days">`;
+        const dayKeys = Object.keys(data.days).sort();
+        for (const dk of dayKeys) {
+          const dd = data.days[dk];
+          const dayPct = maxDayMessages > 0 ? Math.round((dd.messages / maxDayMessages) * 100) : 0;
+          html += `<div class="day-bar-row">`;
+          html += `<div class="day-bar-label">${dayNames[dd.dow]}</div>`;
+          html += `<div class="day-bar-track-inner"><div class="day-bar-fill-inner" style="width:${dayPct}%"></div></div>`;
+          html += `<div class="day-bar-count">${dd.convos.size}c / ${dd.messages}m</div>`;
+          html += `</div>`;
+        }
+        html += `</div></div>`;
+      }
+
+      cardsEl.innerHTML = html;
+      container.style.display = '';
     }
 
     // Month navigation
@@ -811,6 +1148,7 @@
         }
         updateMonthLabel();
         updateStats();
+        renderWeeklySummary();
         renderHeatmap();
       });
 
@@ -822,6 +1160,7 @@
         }
         updateMonthLabel();
         updateStats();
+        renderWeeklySummary();
         renderHeatmap();
       });
 
@@ -993,10 +1332,13 @@
           ? Math.round((convo.endTime - convo.startTime) / 60000)
           : 0;
 
+        const projectTag = convo.project ? `<span class="convo-project">${escapeHtml(convo.project)}</span>` : '';
+
         item.innerHTML = `
           <div class="convo-time">${time}</div>
           <div class="convo-preview">${escapeHtml(preview)}${preview.length >= 100 ? '...' : ''}</div>
           <div class="convo-meta">${convo.messages.length} messages${duration > 0 ? ` / ${duration} min` : ''}</div>
+          ${projectTag}
         `;
 
         item.addEventListener('click', () => showConversation(convo));
@@ -1014,7 +1356,8 @@
         hour12: false
       });
       const dateStr = `${monthNames[convo.startTime.getMonth()]} ${convo.startTime.getDate()}, ${convo.startTime.getFullYear()}`;
-      convoOverlayTitle.textContent = `${dateStr} at ${time}`;
+      const projectStr = convo.project ? ` — ${convo.project}` : '';
+      convoOverlayTitle.textContent = `${dateStr} at ${time}${projectStr}`;
 
       convoMessages.innerHTML = '';
 
