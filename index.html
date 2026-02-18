@@ -269,7 +269,7 @@
     .overlay {
       position: fixed;
       inset: 0;
-      background: var(--canvas-base);
+      background: rgba(0, 0, 0, 0.85);
       z-index: 1000;
       overflow-y: auto;
       display: none;
@@ -277,6 +277,14 @@
 
     .overlay.active {
       display: block;
+    }
+
+    .overlay-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      min-height: 100%;
+      background: var(--canvas-base);
+      position: relative;
     }
 
     .overlay-header {
@@ -318,8 +326,6 @@
 
     .overlay-content {
       padding: 24px;
-      max-width: 900px;
-      margin: 0 auto;
     }
 
     /* Conversation List */
@@ -786,23 +792,27 @@
 
   <!-- Day conversations overlay -->
   <div class="overlay" id="day-overlay">
-    <div class="overlay-header">
-      <span class="overlay-title" id="day-overlay-title">conversations</span>
-      <button class="overlay-close" id="day-overlay-close">esc to close</button>
-    </div>
-    <div class="overlay-content">
-      <div class="convo-list" id="convo-list"></div>
+    <div class="overlay-inner">
+      <div class="overlay-header">
+        <span class="overlay-title" id="day-overlay-title">conversations</span>
+        <button class="overlay-close" id="day-overlay-close">esc to close</button>
+      </div>
+      <div class="overlay-content">
+        <div class="convo-list" id="convo-list"></div>
+      </div>
     </div>
   </div>
 
   <!-- Conversation view overlay -->
   <div class="overlay" id="convo-overlay">
-    <div class="overlay-header">
-      <span class="overlay-title" id="convo-overlay-title">conversation</span>
-      <button class="overlay-close" id="convo-overlay-close">esc to close</button>
-    </div>
-    <div class="overlay-content">
-      <div id="convo-messages"></div>
+    <div class="overlay-inner">
+      <div class="overlay-header">
+        <span class="overlay-title" id="convo-overlay-title">conversation</span>
+        <button class="overlay-close" id="convo-overlay-close">esc to close</button>
+      </div>
+      <div class="overlay-content">
+        <div id="convo-messages"></div>
+      </div>
     </div>
   </div>
 
@@ -1233,7 +1243,8 @@
         for (const dk of dayKeys) {
           const dd = data.days[dk];
           const dayPct = maxDayMessages > 0 ? Math.round((dd.messages / maxDayMessages) * 100) : 0;
-          html += `<div class="day-bar-row">`;
+          const dayNum = parseInt(dk.split('-')[2]);
+          html += `<div class="day-bar-row" onclick="event.stopPropagation(); scrollToHeatmapDay(${dayNum})">`;
           html += `<div class="day-bar-label">${dayNames[dd.dow]}</div>`;
           html += `<div class="day-bar-track-inner"><div class="day-bar-fill-inner" style="width:${dayPct}%"></div></div>`;
           html += `<div class="day-bar-count">${dd.convos.size}c / ${dd.messages}m</div>`;
@@ -1319,10 +1330,11 @@
             const key = `${day}-${hour}`;
 
             if (!grid[key]) {
-              grid[key] = { messages: 0, time: 0 };
+              grid[key] = { messages: 0, time: 0, projects: new Set() };
             }
 
             grid[key].messages++;
+            if (convo.project) grid[key].projects.add(convo.project);
           }
         }
       }
@@ -1364,6 +1376,7 @@
       for (let day = 1; day <= daysInMonth; day++) {
         const dayLabel = document.createElement('div');
         dayLabel.className = 'day-label';
+        dayLabel.id = `heatmap-day-${day}`;
         dayLabel.textContent = day;
         heatmap.appendChild(dayLabel);
 
@@ -1379,10 +1392,14 @@
             const level = getHeatLevel(val, maxValue);
             cell.classList.add(`heat-${level}`);
 
-            const tooltip = displayMode === 'messages'
+            const projCount = data.projects.size;
+            const projNames = projCount > 0 ? Array.from(data.projects).join(', ') : '';
+            const msgInfo = displayMode === 'messages'
               ? `${data.messages} messages`
               : `${Math.round(data.time)} min`;
-            cell.title = tooltip;
+            cell.title = projCount > 0
+              ? `${msgInfo} / ${projCount} project${projCount > 1 ? 's' : ''}: ${projNames}`
+              : msgInfo;
           }
 
           cell.addEventListener('click', () => showDayConversations(day));
@@ -1460,6 +1477,7 @@
       }
 
       dayOverlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
     }
 
     // Show full conversation
@@ -1488,6 +1506,7 @@
       }
 
       convoOverlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
     }
 
     // Overlays setup
@@ -1495,10 +1514,27 @@
       // Close buttons
       document.getElementById('day-overlay-close').addEventListener('click', () => {
         dayOverlay.classList.remove('active');
+        document.body.style.overflow = '';
       });
 
       document.getElementById('convo-overlay-close').addEventListener('click', () => {
         convoOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+      });
+
+      // Click outside (on the dark backdrop) to close
+      dayOverlay.addEventListener('click', (e) => {
+        if (e.target === dayOverlay) {
+          dayOverlay.classList.remove('active');
+          document.body.style.overflow = '';
+        }
+      });
+
+      convoOverlay.addEventListener('click', (e) => {
+        if (e.target === convoOverlay) {
+          convoOverlay.classList.remove('active');
+          document.body.style.overflow = '';
+        }
       });
 
       // ESC key
@@ -1506,11 +1542,51 @@
         if (e.key === 'Escape') {
           if (convoOverlay.classList.contains('active')) {
             convoOverlay.classList.remove('active');
+            document.body.style.overflow = '';
           } else if (dayOverlay.classList.contains('active')) {
             dayOverlay.classList.remove('active');
+            document.body.style.overflow = '';
           }
         }
       });
+    }
+
+    // Scroll to heatmap day row and briefly highlight it
+    function scrollToHeatmapDay(day) {
+      const el = document.getElementById(`heatmap-day-${day}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Get the row bounding box from label to last cell
+        let lastCell = el;
+        let sibling = el.nextElementSibling;
+        for (let i = 0; i < 24 && sibling; i++) {
+          lastCell = sibling;
+          sibling = sibling.nextElementSibling;
+        }
+        const container = document.getElementById('heatmap');
+        const containerRect = container.getBoundingClientRect();
+        const startRect = el.getBoundingClientRect();
+        const endRect = lastCell.getBoundingClientRect();
+
+        // Create a single highlight rectangle
+        const highlight = document.createElement('div');
+        highlight.style.cssText = `
+          position: absolute;
+          top: ${startRect.top - containerRect.top}px;
+          left: ${startRect.left - containerRect.left}px;
+          width: ${endRect.right - startRect.left}px;
+          height: ${endRect.bottom - startRect.top}px;
+          border: 1px solid var(--accent-primary);
+          pointer-events: none;
+          transition: opacity 0.3s ease;
+        `;
+        container.style.position = 'relative';
+        container.appendChild(highlight);
+        setTimeout(() => {
+          highlight.style.opacity = '0';
+          setTimeout(() => highlight.remove(), 300);
+        }, 1200);
+      }
     }
 
     // Escape HTML
