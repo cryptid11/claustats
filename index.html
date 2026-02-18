@@ -534,7 +534,7 @@
 
     .week-bar-fill {
       height: 100%;
-      background: var(--accent-primary);
+      background: #a78bfa;
       transition: width 0.4s ease;
     }
 
@@ -618,6 +618,70 @@
       border-color: #6ee7b730;
     }
 
+    .project-tag {
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .project-tag:hover {
+      border-color: #a78bfa60;
+    }
+
+    .project-tag.active {
+      color: var(--canvas-base);
+      background: #a78bfa;
+      border-color: #a78bfa;
+    }
+
+    .project-tag.new.active {
+      color: var(--canvas-base);
+      background: #6ee7b7;
+      border-color: #6ee7b7;
+    }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      background: #a78bfa10;
+      border: 1px solid #a78bfa30;
+    }
+
+    .filter-label {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      text-transform: lowercase;
+      letter-spacing: 0.08em;
+    }
+
+    .filter-project {
+      font-size: 11px;
+      color: #a78bfa;
+      letter-spacing: 0.05em;
+    }
+
+    .filter-clear {
+      margin-left: auto;
+      background: transparent;
+      border: 1px solid #a78bfa30;
+      color: #a78bfa;
+      padding: 3px 10px;
+      font-family: inherit;
+      font-size: 10px;
+      text-transform: lowercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-clear:hover {
+      background: #a78bfa;
+      color: var(--canvas-base);
+    }
+
     .convo-project {
       font-size: 10px;
       color: #a78bfa;
@@ -697,6 +761,12 @@
       </div>
     </div>
 
+    <div class="filter-bar" id="filter-bar" style="display: none;">
+      <span class="filter-label">filtered:</span>
+      <span class="filter-project" id="filter-project"></span>
+      <button class="filter-clear" id="filter-clear">clear</button>
+    </div>
+
     <div class="heatmap-container" id="heatmap-container">
       <div class="heatmap" id="heatmap"></div>
       <div class="legend">
@@ -742,6 +812,7 @@
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth();
     let displayMode = 'messages'; // 'messages' or 'time'
+    let selectedProject = null; // null = show all
 
     // DOM elements
     const dropZone = document.getElementById('drop-zone');
@@ -766,10 +837,30 @@
     // Initialize
     function init() {
       setupDropZone();
-
       setupMonthNav();
       setupToggle();
       setupOverlays();
+      setupFilter();
+      renderHeatmap();
+    }
+
+    // Project filter
+    function setupFilter() {
+      document.getElementById('filter-clear').addEventListener('click', () => {
+        toggleProjectFilter(null);
+      });
+    }
+
+    function toggleProjectFilter(project) {
+      if (selectedProject === project || project === null) {
+        selectedProject = null;
+        document.getElementById('filter-bar').style.display = 'none';
+      } else {
+        selectedProject = project;
+        document.getElementById('filter-project').textContent = project;
+        document.getElementById('filter-bar').style.display = 'flex';
+      }
+      renderWeeklySummary();
       renderHeatmap();
     }
 
@@ -940,15 +1031,30 @@
           console.error('[parse] Error parsing line:', e.message);
         }
       }
-      // Merge sessions into conversations (avoid duplicates)
-      const existingIds = new Set(conversations.map(c => c.id));
+      // Merge sessions into conversations (merge into existing if same sessionId)
       for (const session of Object.values(sessions)) {
-        if (session.messages.length > 0 && !existingIds.has(session.id)) {
+        if (session.messages.length === 0) continue;
+
+        const existing = conversations.find(c => c.id === session.id);
+        if (existing) {
+          // Merge new messages (dedupe by timestamp+role)
+          const existingKeys = new Set(existing.messages.map(m => m.timestamp.getTime() + m.role));
+          for (const msg of session.messages) {
+            const key = msg.timestamp.getTime() + msg.role;
+            if (!existingKeys.has(key)) {
+              existing.messages.push(msg);
+              existingKeys.add(key);
+            }
+          }
+          existing.messages.sort((a, b) => a.timestamp - b.timestamp);
+          // Update time bounds
+          if (session.startTime < existing.startTime) existing.startTime = session.startTime;
+          if (session.endTime > existing.endTime) existing.endTime = session.endTime;
+          if (!existing.project && session.project) existing.project = session.project;
+        } else {
           session.messages.sort((a, b) => a.timestamp - b.timestamp);
-          // Remove the seenUuids Set before storing (not needed anymore)
           delete session.seenUuids;
           conversations.push(session);
-          existingIds.add(session.id);
         }
       }
 
@@ -1104,6 +1210,7 @@
         html += `<div class="week-card" onclick="this.querySelector('.week-days').classList.toggle('open')">`;
         html += `<div class="week-label">${data.range}</div>`;
         html += `<div class="week-stats">`;
+        html += `<div class="week-stat"><div class="num">${data.projects.size}</div><div class="lbl">projects</div></div>`;
         html += `<div class="week-stat"><div class="num">${convoCount}</div><div class="lbl">convos</div></div>`;
         html += `<div class="week-stat"><div class="num">${data.messages}</div><div class="lbl">messages</div></div>`;
         html += `</div>`;
@@ -1114,7 +1221,8 @@
           html += `<div class="week-projects">`;
           for (const proj of data.projects) {
             const isNew = projectFirstWeek[proj] === wk;
-            html += `<span class="project-tag${isNew ? ' new' : ''}">${escapeHtml(proj)}${isNew ? ' ✱' : ''}</span>`;
+            const isActive = selectedProject === proj;
+            html += `<span class="project-tag${isNew ? ' new' : ''}${isActive ? ' active' : ''}" onclick="event.stopPropagation(); toggleProjectFilter('${escapeHtml(proj)}')">${escapeHtml(proj)}${isNew ? ' ✱' : ''}</span>`;
           }
           html += `</div>`;
         }
@@ -1195,10 +1303,17 @@
       const grid = {};
       let maxValue = 0;
 
-      for (const convo of conversations) {
+      // Collect all messages for this month, sorted globally (respecting project filter)
+      const filteredConvos = selectedProject
+        ? conversations.filter(c => c.project === selectedProject)
+        : conversations;
+      const monthMessages = [];
+      for (const convo of filteredConvos) {
         for (const msg of convo.messages) {
           const d = msg.timestamp;
           if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+            monthMessages.push(d);
+
             const day = d.getDate();
             const hour = d.getHours();
             const key = `${day}-${hour}`;
@@ -1210,23 +1325,19 @@
             grid[key].messages++;
           }
         }
+      }
 
-        // Calculate time per hour block for this conversation
-        if (convo.messages.length >= 2) {
-          for (let i = 1; i < convo.messages.length; i++) {
-            const d = convo.messages[i].timestamp;
-            if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
-              const gap = (convo.messages[i].timestamp - convo.messages[i - 1].timestamp) / 60000;
-              // Only count gaps under 30 min as active time
-              if (gap < 30) {
-                const day = d.getDate();
-                const hour = d.getHours();
-                const key = `${day}-${hour}`;
-                if (grid[key]) {
-                  grid[key].time += gap;
-                }
-              }
-            }
+      // Sort all messages globally and calculate time from gaps < 30min
+      monthMessages.sort((a, b) => a - b);
+      for (let i = 1; i < monthMessages.length; i++) {
+        const gap = (monthMessages[i] - monthMessages[i - 1]) / 60000;
+        if (gap < 30) {
+          const d = monthMessages[i];
+          const day = d.getDate();
+          const hour = d.getHours();
+          const key = `${day}-${hour}`;
+          if (grid[key]) {
+            grid[key].time += gap;
           }
         }
       }
@@ -1291,9 +1402,12 @@
       return 5;
     }
 
-    // Show conversations for a day (any message on that day)
+    // Show conversations for a day (any message on that day, respecting project filter)
     function showDayConversations(day) {
-      const dayConvos = conversations.filter(c => {
+      const source = selectedProject
+        ? conversations.filter(c => c.project === selectedProject)
+        : conversations;
+      const dayConvos = source.filter(c => {
         return c.messages.some(m => {
           const d = m.timestamp;
           return d.getFullYear() === currentYear &&
