@@ -402,6 +402,25 @@
       color: var(--text-secondary);
     }
 
+    .message-time {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      letter-spacing: 0.05em;
+      margin-left: 8px;
+    }
+
+    .message-role-line {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .message.highlighted {
+      border-left: 2px solid var(--accent-primary);
+      padding-left: 22px;
+      background: var(--accent-surface);
+    }
+
     .message-content {
       color: var(--text-primary);
       line-height: 1.7;
@@ -850,6 +869,122 @@
       display: none;
     }
 
+    /* Search */
+    .search-container {
+      margin-bottom: 24px;
+      display: none;
+    }
+
+    .search-input-wrap {
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--canvas-surface);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 12px;
+      padding: 10px 14px 10px 32px;
+      outline: none;
+      transition: border-color 0.15s ease;
+      text-transform: lowercase;
+      letter-spacing: 0.05em;
+    }
+
+    .search-input::placeholder {
+      color: var(--text-tertiary);
+      letter-spacing: 0.08em;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-primary);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-tertiary);
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    .search-meta {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      text-transform: lowercase;
+      letter-spacing: 0.05em;
+      margin-top: 8px;
+    }
+
+    .search-results {
+      margin-top: 8px;
+      max-height: 500px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .search-result {
+      background: var(--canvas-surface);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .search-result:hover {
+      border-color: var(--accent-primary);
+      background: var(--canvas-elevated);
+    }
+
+    .search-result-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .search-result-time {
+      font-size: 10px;
+      color: var(--accent-primary);
+      letter-spacing: 0.05em;
+    }
+
+    .search-result-project {
+      font-size: 9px;
+      color: #a78bfa;
+      background: #a78bfa10;
+      border: 1px solid #a78bfa20;
+      padding: 1px 6px;
+      letter-spacing: 0.05em;
+    }
+
+    .search-result-role {
+      font-size: 9px;
+      color: var(--text-tertiary);
+      letter-spacing: 0.08em;
+      text-transform: lowercase;
+    }
+
+    .search-result-snippet {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .search-result-snippet mark {
+      background: #fbbf2440;
+      color: #fbbf24;
+      padding: 0 1px;
+    }
+
     /* Empty state */
     .empty-state {
       text-align: center;
@@ -903,6 +1038,15 @@
         <span class="stat-label">projects:</span>
         <span class="stat-value" id="stat-projects">0</span>
       </div>
+    </div>
+
+    <div class="search-container" id="search-container">
+      <div class="search-input-wrap">
+        <span class="search-icon">/</span>
+        <input type="text" class="search-input" id="search-input" placeholder="search conversations...">
+      </div>
+      <div class="search-meta" id="search-meta"></div>
+      <div class="search-results" id="search-results"></div>
     </div>
 
     <div class="project-ranking" id="project-ranking" style="display: none;">
@@ -1038,6 +1182,7 @@
       setupToggle();
       setupOverlays();
       setupFilter();
+      setupSearch();
       restoreSectionStates();
       renderHeatmap();
     }
@@ -1112,6 +1257,94 @@
       renderProjectRanking();
       renderWeeklySummary();
       renderHeatmap();
+    }
+
+    // Search
+    let searchTimeout = null;
+
+    function setupSearch() {
+      const input = document.getElementById('search-input');
+      input.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => runSearch(input.value.trim()), 200);
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          input.value = '';
+          document.getElementById('search-results').innerHTML = '';
+          document.getElementById('search-meta').textContent = '';
+          input.blur();
+        }
+      });
+    }
+
+    function runSearch(query) {
+      const resultsEl = document.getElementById('search-results');
+      const metaEl = document.getElementById('search-meta');
+
+      if (query.length < 2) {
+        resultsEl.innerHTML = '';
+        metaEl.textContent = '';
+        return;
+      }
+
+      const lowerQ = query.toLowerCase();
+      const results = [];
+      const maxResults = 50;
+
+      for (const convo of conversations) {
+        for (const msg of convo.messages) {
+          if (results.length >= maxResults) break;
+          const idx = msg.content.toLowerCase().indexOf(lowerQ);
+          if (idx !== -1) {
+            results.push({ convo, msg, idx });
+          }
+        }
+        if (results.length >= maxResults) break;
+      }
+
+      metaEl.textContent = results.length >= maxResults
+        ? `${maxResults}+ matches found`
+        : `${results.length} match${results.length !== 1 ? 'es' : ''} found`;
+
+      let html = '';
+      for (const { convo, msg, idx } of results) {
+        const d = msg.timestamp;
+        const dateStr = `${monthNames[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+        const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+        const projDisplay = convo.projectGroupedName || convo.project || '';
+
+        // Build snippet with highlight
+        const snippetStart = Math.max(0, idx - 60);
+        const snippetEnd = Math.min(msg.content.length, idx + query.length + 60);
+        let snippet = msg.content.slice(snippetStart, snippetEnd).replace(/\n/g, ' ');
+        if (snippetStart > 0) snippet = '...' + snippet;
+        if (snippetEnd < msg.content.length) snippet = snippet + '...';
+
+        // Escape and highlight
+        const before = escapeHtml(snippet.slice(0, idx - snippetStart + (snippetStart > 0 ? 3 : 0)));
+        const match = escapeHtml(snippet.slice(idx - snippetStart + (snippetStart > 0 ? 3 : 0), idx - snippetStart + (snippetStart > 0 ? 3 : 0) + query.length));
+        const after = escapeHtml(snippet.slice(idx - snippetStart + (snippetStart > 0 ? 3 : 0) + query.length));
+
+        html += `<div class="search-result" data-convo-id="${escapeHtml(convo.id)}">`;
+        html += `<div class="search-result-header">`;
+        html += `<span class="search-result-time">${dateStr} ${time}</span>`;
+        html += `<span class="search-result-role">${msg.role}</span>`;
+        if (projDisplay) html += `<span class="search-result-project">${escapeHtml(projDisplay)}</span>`;
+        html += `</div>`;
+        html += `<div class="search-result-snippet">${before}<mark>${match}</mark>${after}</div>`;
+        html += `</div>`;
+      }
+
+      resultsEl.innerHTML = html;
+
+      // Click handlers
+      resultsEl.querySelectorAll('.search-result').forEach(el => {
+        el.addEventListener('click', () => {
+          const convo = conversations.find(c => c.id === el.dataset.convoId);
+          if (convo) showConversation(convo);
+        });
+      });
     }
 
     // Project grouping
@@ -1427,6 +1660,7 @@
       // Update UI
       fileCount.textContent = `${conversations.length} conversations loaded`;
       statsBar.style.display = 'flex';
+      document.getElementById('search-container').style.display = 'block';
       updateStats();
       renderProjectRanking();
       renderWeeklySummary();
@@ -1828,7 +2062,7 @@
             }
           }
 
-          cell.addEventListener('click', () => showDayConversations(day));
+          cell.addEventListener('click', () => showDayConversations(day, hour));
           heatmap.appendChild(cell);
         }
       }
@@ -1878,7 +2112,7 @@
     }
 
     // Show conversations for a day (any message on that day, respecting project filter)
-    function showDayConversations(day) {
+    function showDayConversations(day, hour) {
       const source = selectedProject
         ? conversations.filter(c => getProjectKey(c) === selectedProject)
         : conversations;
@@ -1900,7 +2134,8 @@
 
       // Update title
       const dateStr = `${monthNames[currentMonth]} ${day}, ${currentYear}`;
-      dayOverlayTitle.textContent = `${dateStr} - ${dayConvos.length} conversation${dayConvos.length > 1 ? 's' : ''}`;
+      const hourStr = hour != null ? ` ${String(hour).padStart(2, '0')}:00` : '';
+      dayOverlayTitle.textContent = `${dateStr}${hourStr} - ${dayConvos.length} conversation${dayConvos.length > 1 ? 's' : ''}`;
 
       // Render list
       convoList.innerHTML = '';
@@ -1931,7 +2166,7 @@
           ${projectTag}
         `;
 
-        item.addEventListener('click', () => showConversation(convo));
+        item.addEventListener('click', () => showConversation(convo, day, hour));
         convoList.appendChild(item);
       }
 
@@ -1940,7 +2175,7 @@
     }
 
     // Show full conversation
-    function showConversation(convo) {
+    function showConversation(convo, targetDay, targetHour) {
       const time = convo.startTime.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
@@ -1952,21 +2187,56 @@
       convoOverlayTitle.textContent = `${dateStr} at ${time}${projectStr}`;
 
       convoMessages.innerHTML = '';
+      let firstHighlight = null;
 
       for (const msg of convo.messages) {
         const msgEl = document.createElement('div');
         msgEl.className = 'message';
 
+        const msgTime = msg.timestamp.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+        const msgDate = msg.timestamp.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        }).toLowerCase();
+
+        // Highlight messages matching the target day+hour
+        const isTarget = targetDay != null && targetHour != null &&
+          msg.timestamp.getFullYear() === currentYear &&
+          msg.timestamp.getMonth() === currentMonth &&
+          msg.timestamp.getDate() === targetDay &&
+          msg.timestamp.getHours() === targetHour;
+
+        if (isTarget) {
+          msgEl.classList.add('highlighted');
+          if (!firstHighlight) firstHighlight = msgEl;
+        }
+
         msgEl.innerHTML = `
-          <div class="message-role ${msg.role}">${msg.role}</div>
+          <div class="message-role-line">
+            <div class="message-role ${msg.role}">${msg.role}</div>
+            <span class="message-time">${msgDate} ${msgTime}</span>
+          </div>
           <div class="message-content">${escapeHtml(msg.content)}</div>
         `;
 
         convoMessages.appendChild(msgEl);
       }
 
+      convoOverlay.scrollTop = 0;
       convoOverlay.classList.add('active');
       document.body.style.overflow = 'hidden';
+
+      // Scroll to first highlighted message after layout settles
+      if (firstHighlight) {
+        setTimeout(() => {
+          firstHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 80);
+      }
     }
 
     // Overlays setup
