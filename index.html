@@ -133,11 +133,106 @@
     /* Stats bar */
     .stats-bar {
       display: flex;
-      gap: 24px;
+      justify-content: space-between;
       margin-bottom: 24px;
       padding: 12px 16px;
       background: var(--canvas-surface);
       border: 1px solid var(--border);
+    }
+
+    .stats-group {
+      display: flex;
+      gap: 20px;
+      align-items: baseline;
+    }
+
+    .stats-group-label {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      text-transform: lowercase;
+      letter-spacing: 0.1em;
+      opacity: 0.6;
+      margin-right: 4px;
+    }
+
+    .stats-expand-arrow {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      padding: 6px 8px;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: transform 0.2s ease;
+      margin-right: 2px;
+    }
+
+    .stats-expand-arrow:hover {
+      color: var(--text-primary);
+      background: var(--canvas-elevated);
+    }
+
+    .stats-expand-arrow.open {
+      transform: rotate(90deg);
+    }
+
+    .stats-charts-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stats-chart-panel {
+      flex: 1;
+      background: var(--canvas-surface);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+    }
+
+    .stats-chart-panel .chart-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .stats-chart-panel .chart-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stats-chart-panel .chart-label {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      min-width: 50px;
+      text-align: right;
+      letter-spacing: 0.05em;
+    }
+
+    .stats-chart-panel .chart-bar-track {
+      flex: 1;
+      height: 14px;
+      background: var(--canvas-elevated);
+      overflow: hidden;
+    }
+
+    .stats-chart-panel .chart-bar-fill {
+      height: 100%;
+      background: var(--accent-primary);
+      transition: width 0.3s ease;
+    }
+
+    .stats-chart-panel .chart-value {
+      font-size: 10px;
+      color: var(--text-secondary);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .stats-chart-panel .chart-title {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      margin-bottom: 8px;
+      letter-spacing: 0.1em;
+      text-transform: lowercase;
     }
 
     .stat-item {
@@ -841,6 +936,81 @@
       letter-spacing: 0.05em;
     }
 
+    .project-rank-item .expand-arrow {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      transition: transform 0.2s ease;
+      padding: 6px 8px;
+      margin: -6px 0;
+      cursor: pointer;
+      border-radius: 3px;
+    }
+
+    .project-rank-item .expand-arrow:hover {
+      color: var(--text-primary);
+      background: var(--canvas-elevated);
+    }
+
+    .project-rank-item .expand-arrow.open {
+      transform: rotate(90deg);
+    }
+
+    .project-chart-panel {
+      background: var(--canvas-surface);
+      border: 1px solid var(--border);
+      border-top: none;
+      padding: 12px 16px;
+      margin-bottom: 4px;
+    }
+
+    .project-chart-panel .chart-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .project-chart-panel .chart-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .project-chart-panel .chart-label {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      min-width: 50px;
+      text-align: right;
+      letter-spacing: 0.05em;
+    }
+
+    .project-chart-panel .chart-bar-track {
+      flex: 1;
+      height: 14px;
+      background: var(--canvas-elevated);
+      overflow: hidden;
+    }
+
+    .project-chart-panel .chart-bar-fill {
+      height: 100%;
+      background: #a78bfa;
+      transition: width 0.3s ease;
+    }
+
+    .project-chart-panel .chart-value {
+      font-size: 10px;
+      color: var(--text-secondary);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .project-chart-panel .chart-title {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      margin-bottom: 8px;
+      letter-spacing: 0.1em;
+      text-transform: lowercase;
+    }
+
     /* Collapsible section headers */
     .section-toggle {
       display: flex;
@@ -1023,22 +1193,50 @@
     </div>
 
     <div class="stats-bar" id="stats-bar" style="display: none;">
-      <div class="stat-item">
-        <span class="stat-label">conversations:</span>
-        <span class="stat-value" id="stat-convos">0</span>
+      <div class="stats-group">
+        <span class="stats-expand-arrow" id="stats-month-arrow" onclick="toggleStatsChart('month')">&#9654;</span>
+        <span class="stats-group-label" id="stats-month-label">this month</span>
+        <div class="stat-item">
+          <span class="stat-label">convos:</span>
+          <span class="stat-value" id="stat-month-convos">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">messages:</span>
+          <span class="stat-value" id="stat-month-messages">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">hours:</span>
+          <span class="stat-value" id="stat-month-hours">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">projects:</span>
+          <span class="stat-value" id="stat-month-projects">0</span>
+        </div>
       </div>
-      <div class="stat-item">
-        <span class="stat-label">messages:</span>
-        <span class="stat-value" id="stat-messages">0</span>
+      <div class="stats-group">
+        <span class="stats-expand-arrow" id="stats-total-arrow" onclick="toggleStatsChart('total')">&#9654;</span>
+        <span class="stats-group-label">total</span>
+        <div class="stat-item">
+          <span class="stat-label">convos:</span>
+          <span class="stat-value" id="stat-total-convos">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">messages:</span>
+          <span class="stat-value" id="stat-total-messages">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">hours:</span>
+          <span class="stat-value" id="stat-total-hours">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">projects:</span>
+          <span class="stat-value" id="stat-total-projects">0</span>
+        </div>
       </div>
-      <div class="stat-item">
-        <span class="stat-label">this month:</span>
-        <span class="stat-value" id="stat-month">0</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">projects:</span>
-        <span class="stat-value" id="stat-projects">0</span>
-      </div>
+    </div>
+    <div class="stats-charts-row" id="stats-charts-row" style="display:none">
+      <div class="stats-chart-panel" id="stats-chart-month" style="display:none"></div>
+      <div class="stats-chart-panel" id="stats-chart-total" style="display:none"></div>
     </div>
 
     <div class="search-container" id="search-container">
@@ -1690,21 +1888,166 @@
 
     // Update stats
     function updateStats() {
+      // Update month label
+      document.getElementById('stats-month-label').textContent = monthNames[currentMonth] + ' ' + currentYear;
+
+      // --- This month stats ---
+      let monthMsgCount = 0;
+      const monthConvoIds = new Set();
+      const monthProjects = new Set();
+      const monthTs = [];
+
+      for (const convo of conversations) {
+        const projKey = getProjectKey(convo);
+        for (const msg of convo.messages) {
+          const d = msg.timestamp;
+          if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+            monthMsgCount++;
+            monthConvoIds.add(convo.id);
+            if (projKey) monthProjects.add(projKey);
+            monthTs.push(d.getTime());
+          }
+        }
+      }
+
+      monthTs.sort((a, b) => a - b);
+      let monthMinutes = 0;
+      for (let i = 1; i < monthTs.length; i++) {
+        const gap = (monthTs[i] - monthTs[i - 1]) / 60000;
+        if (gap < 30) monthMinutes += gap;
+      }
+      const monthHours = monthMinutes / 60;
+
+      document.getElementById('stat-month-convos').textContent = monthConvoIds.size;
+      document.getElementById('stat-month-messages').textContent = monthMsgCount;
+      document.getElementById('stat-month-hours').textContent = monthHours < 10 ? monthHours.toFixed(1) : Math.round(monthHours);
+      document.getElementById('stat-month-projects').textContent = monthProjects.size;
+
+      // --- Total stats ---
       const totalMessages = conversations.reduce((sum, c) => sum + c.messages.length, 0);
-      document.getElementById('stat-convos').textContent = conversations.length;
-      document.getElementById('stat-messages').textContent = totalMessages;
+      const totalProjects = new Set(conversations.map(c => getProjectKey(c)).filter(Boolean));
 
-      // Count conversations that have any message this month
-      const monthConvos = conversations.filter(c => {
-        return c.messages.some(m => {
-          const d = m.timestamp;
-          return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
-        });
-      });
-      document.getElementById('stat-month').textContent = monthConvos.length;
+      const allTs = [];
+      for (const convo of conversations) {
+        for (const msg of convo.messages) allTs.push(msg.timestamp.getTime());
+      }
+      allTs.sort((a, b) => a - b);
+      let totalMinutes = 0;
+      for (let i = 1; i < allTs.length; i++) {
+        const gap = (allTs[i] - allTs[i - 1]) / 60000;
+        if (gap < 30) totalMinutes += gap;
+      }
+      const totalHours = totalMinutes / 60;
 
-      const projects = new Set(conversations.map(c => getProjectKey(c)).filter(Boolean));
-      document.getElementById('stat-projects').textContent = projects.size;
+      document.getElementById('stat-total-convos').textContent = conversations.length;
+      document.getElementById('stat-total-messages').textContent = totalMessages;
+      document.getElementById('stat-total-hours').textContent = totalHours < 10 ? totalHours.toFixed(1) : Math.round(totalHours);
+      document.getElementById('stat-total-projects').textContent = totalProjects.size;
+
+      // Re-render open stats charts
+      if (document.getElementById('stats-chart-month').style.display !== 'none') renderStatsChart('month');
+      if (document.getElementById('stats-chart-total').style.display !== 'none') renderStatsChart('total');
+    }
+
+    function toggleStatsChart(which) {
+      const panel = document.getElementById('stats-chart-' + which);
+      const arrow = document.getElementById('stats-' + which + '-arrow');
+      const row = document.getElementById('stats-charts-row');
+
+      if (panel.style.display !== 'none') {
+        panel.style.display = 'none';
+        arrow.classList.remove('open');
+      } else {
+        panel.style.display = '';
+        arrow.classList.add('open');
+        renderStatsChart(which);
+      }
+
+      // Hide the row container if both panels are hidden
+      const monthVis = document.getElementById('stats-chart-month').style.display !== 'none';
+      const totalVis = document.getElementById('stats-chart-total').style.display !== 'none';
+      row.style.display = (monthVis || totalVis) ? '' : 'none';
+    }
+
+    function renderStatsChart(which) {
+      const panel = document.getElementById('stats-chart-' + which);
+
+      const allTs = [];
+      for (const convo of conversations) {
+        for (const msg of convo.messages) {
+          allTs.push(msg.timestamp);
+        }
+      }
+      allTs.sort((a, b) => a - b);
+
+      const bucketMinutes = {};
+
+      if (which === 'total') {
+        // Hours by month across all time
+        for (let i = 0; i < allTs.length; i++) {
+          const d = allTs[i];
+          const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+          if (!bucketMinutes[key]) bucketMinutes[key] = 0;
+          if (i > 0) {
+            const gap = (d - allTs[i - 1]) / 60000;
+            if (gap < 30) bucketMinutes[key] += gap;
+          }
+        }
+      } else {
+        // Hours by day for current month
+        const filtered = allTs.filter(d =>
+          d.getFullYear() === currentYear && d.getMonth() === currentMonth
+        );
+        for (let i = 0; i < filtered.length; i++) {
+          const d = filtered[i];
+          const key = String(d.getDate());
+          if (!bucketMinutes[key]) bucketMinutes[key] = 0;
+          if (i > 0) {
+            const gap = (d - filtered[i - 1]) / 60000;
+            if (gap < 30) bucketMinutes[key] += gap;
+          }
+        }
+      }
+
+      const buckets = [];
+      let maxHours = 0;
+
+      if (which === 'total') {
+        const keys = Object.keys(bucketMinutes).sort();
+        for (const key of keys) {
+          const hrs = bucketMinutes[key] / 60;
+          const [y, m] = key.split('-');
+          const label = monthNames[parseInt(m) - 1] + ' ' + y.slice(2);
+          buckets.push({ label, hours: hrs });
+          if (hrs > maxHours) maxHours = hrs;
+        }
+      } else {
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        for (let d = 1; d <= daysInMonth; d++) {
+          const hrs = (bucketMinutes[String(d)] || 0) / 60;
+          buckets.push({ label: String(d).padStart(2, '0'), hours: hrs });
+          if (hrs > maxHours) maxHours = hrs;
+        }
+      }
+
+      const title = which === 'total' ? 'hours by month' : 'hours by day';
+      const color = which === 'total' ? '#a78bfa' : 'var(--accent-primary)';
+
+      let html = `<div class="chart-title">${title}</div>`;
+      html += '<div class="chart-bars">';
+
+      for (const b of buckets) {
+        const pct = maxHours > 0 ? Math.round((b.hours / maxHours) * 100) : 0;
+        const hrsDisplay = b.hours.toFixed(1);
+        html += `<div class="chart-row">`;
+        html += `<span class="chart-label">${b.label}</span>`;
+        html += `<div class="chart-bar-track"><div class="chart-bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
+        html += `<span class="chart-value">${hrsDisplay}h</span>`;
+        html += `</div>`;
+      }
+
+      html += '</div>';
+      panel.innerHTML = html;
     }
 
     // Weekly summary
@@ -1771,21 +2114,171 @@
       }
 
       const maxMsgs = ranked[0][1];
+      // Remember which charts were expanded
+      const prevExpanded = new Set();
+      listEl.querySelectorAll('.project-chart-panel').forEach(el => {
+        if (el.dataset.project) prevExpanded.add(el.dataset.project);
+      });
+
       let html = '';
       for (let i = 0; i < ranked.length; i++) {
         const [name, msgs] = ranked[i];
         const pct = maxMsgs > 0 ? Math.round((msgs / maxMsgs) * 100) : 0;
         const isActive = selectedProject === name;
-        html += `<div class="project-rank-item${isActive ? ' active' : ''}" onclick="toggleProjectFilter('${escapeHtml(name)}')">`;
+        const isExpanded = prevExpanded.has(name);
+        const safeId = 'chart-' + name.replace(/[^a-zA-Z0-9]/g, '_');
+        html += `<div class="project-rank-item${isActive ? ' active' : ''}" onclick="toggleProjectFilter('${escapeHtml(name)}')" data-project="${escapeHtml(name)}">`;
+        html += `<span class="expand-arrow${isExpanded ? ' open' : ''}" onclick="event.stopPropagation(); toggleProjectChart('${escapeHtml(name)}')">&#9654;</span>`;
         html += `<span class="project-rank-pos">${i + 1}</span>`;
         html += `<span class="project-rank-name">${escapeHtml(name)}</span>`;
         html += `<div class="project-rank-bar"><div class="project-rank-bar-fill" style="width:${pct}%"></div></div>`;
         html += `<span class="project-rank-msgs">${msgs} msgs</span>`;
         html += `</div>`;
+        if (isExpanded) {
+          html += `<div class="project-chart-panel" data-project="${escapeHtml(name)}" id="${safeId}"></div>`;
+        }
       }
 
       listEl.innerHTML = html;
       container.style.display = '';
+
+      // Render charts for expanded panels
+      prevExpanded.forEach(name => renderProjectChart(name));
+    }
+
+    function toggleProjectChart(projName) {
+      const listEl = document.getElementById('project-rank-list');
+      const safeId = 'chart-' + projName.replace(/[^a-zA-Z0-9]/g, '_');
+      const existing = document.getElementById(safeId);
+
+      if (existing) {
+        // Collapse: remove chart panel
+        existing.remove();
+        // Update arrow
+        const item = listEl.querySelector(`.project-rank-item[data-project="${CSS.escape(projName)}"]`);
+        if (item) {
+          const arrow = item.querySelector('.expand-arrow');
+          if (arrow) arrow.classList.remove('open');
+        }
+      } else {
+        // Expand: insert chart panel after the rank item
+        const item = listEl.querySelector(`.project-rank-item[data-project="${CSS.escape(projName)}"]`);
+        if (!item) return;
+        const panel = document.createElement('div');
+        panel.className = 'project-chart-panel';
+        panel.dataset.project = projName;
+        panel.id = safeId;
+        item.after(panel);
+        // Update arrow
+        const arrow = item.querySelector('.expand-arrow');
+        if (arrow) arrow.classList.add('open');
+        renderProjectChart(projName);
+      }
+    }
+
+    function renderProjectChart(projName) {
+      const safeId = 'chart-' + projName.replace(/[^a-zA-Z0-9]/g, '_');
+      const panel = document.getElementById(safeId);
+      if (!panel) return;
+
+      // Collect all timestamps for this project
+      const projConvos = conversations.filter(c => getProjectKey(c) === projName);
+      const allTimestamps = [];
+
+      for (const convo of projConvos) {
+        for (const msg of convo.messages) {
+          allTimestamps.push(msg.timestamp);
+        }
+      }
+
+      allTimestamps.sort((a, b) => a - b);
+
+      if (allTimestamps.length === 0) {
+        panel.innerHTML = '<div class="chart-title">no data</div>';
+        return;
+      }
+
+      // Compute hours using gap-based algorithm (gaps < 30min)
+      const bucketMinutes = {};
+
+      if (rankingTimeRange === 'alltime') {
+        // Group by month
+        for (let i = 0; i < allTimestamps.length; i++) {
+          const d = allTimestamps[i];
+          const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+          if (!bucketMinutes[key]) bucketMinutes[key] = 0;
+          if (i > 0) {
+            const gap = (d - allTimestamps[i - 1]) / 60000;
+            if (gap < 30) {
+              bucketMinutes[key] += gap;
+            }
+          }
+        }
+      } else {
+        // Group by day within current month
+        const filteredTs = allTimestamps.filter(d =>
+          d.getFullYear() === currentYear && d.getMonth() === currentMonth
+        );
+        for (let i = 0; i < filteredTs.length; i++) {
+          const d = filteredTs[i];
+          const key = String(d.getDate());
+          if (!bucketMinutes[key]) bucketMinutes[key] = 0;
+          if (i > 0) {
+            const gap = (d - filteredTs[i - 1]) / 60000;
+            if (gap < 30) {
+              bucketMinutes[key] += gap;
+            }
+          }
+        }
+      }
+
+      // Convert to hours and find max
+      const buckets = [];
+      let maxHours = 0;
+
+      if (rankingTimeRange === 'alltime') {
+        // Build sorted month keys with nice labels
+        const keys = Object.keys(bucketMinutes).sort();
+        for (const key of keys) {
+          const hrs = bucketMinutes[key] / 60;
+          const [y, m] = key.split('-');
+          const label = monthNames[parseInt(m) - 1] + ' ' + y.slice(2);
+          buckets.push({ label, hours: hrs });
+          if (hrs > maxHours) maxHours = hrs;
+        }
+      } else {
+        // Build day keys for current month
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        for (let d = 1; d <= daysInMonth; d++) {
+          const key = String(d);
+          const hrs = (bucketMinutes[key] || 0) / 60;
+          if (hrs > 0 || d <= new Date().getDate() || currentMonth !== new Date().getMonth() || currentYear !== new Date().getFullYear()) {
+            buckets.push({ label: String(d).padStart(2, '0'), hours: hrs });
+          }
+          if (hrs > maxHours) maxHours = hrs;
+        }
+      }
+
+      const color = getProjectColor(projName);
+      const title = rankingTimeRange === 'alltime' ? 'hours by month' : 'hours by day';
+
+      let html = `<div class="chart-title">${title}</div>`;
+      html += '<div class="chart-bars">';
+
+      for (const b of buckets) {
+        const pct = maxHours > 0 ? Math.round((b.hours / maxHours) * 100) : 0;
+        const hrsDisplay = b.hours < 0.1 && b.hours > 0
+          ? b.hours.toFixed(1)
+          : b.hours < 1 ? b.hours.toFixed(1) : b.hours.toFixed(1);
+        html += `<div class="chart-row">`;
+        html += `<span class="chart-label">${b.label}</span>`;
+        html += `<div class="chart-bar-track"><div class="chart-bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
+        html += `<span class="chart-value">${hrsDisplay}h</span>`;
+        html += `</div>`;
+      }
+
+      html += '</div>';
+      panel.innerHTML = html;
     }
 
     function renderWeeklySummary() {
