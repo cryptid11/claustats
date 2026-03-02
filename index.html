@@ -711,9 +711,10 @@
     .day-bar-count {
       font-size: 9px;
       color: var(--text-tertiary);
-      width: 70px;
+      width: 110px;
       flex-shrink: 0;
       letter-spacing: 0.05em;
+      white-space: nowrap;
     }
 
     /* Project tags */
@@ -2281,6 +2282,22 @@
       panel.innerHTML = html;
     }
 
+    function computeHoursFromTimestamps(timestamps) {
+      if (timestamps.length < 2) return 0;
+      const sorted = timestamps.map(t => t.getTime()).sort((a, b) => a - b);
+      let mins = 0;
+      for (let i = 1; i < sorted.length; i++) {
+        const gap = (sorted[i] - sorted[i - 1]) / 60000;
+        if (gap < 30) mins += gap;
+      }
+      return mins / 60;
+    }
+
+    function formatHours(hrs) {
+      if (hrs < 0.1) return hrs > 0 ? '< 0.1h' : '0h';
+      return hrs.toFixed(1) + 'h';
+    }
+
     function renderWeeklySummary() {
       const container = document.getElementById('weekly-summary');
       const cardsEl = document.getElementById('week-cards');
@@ -2300,20 +2317,22 @@
           if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
             const wk = getWeekKey(d);
             if (!weeks[wk]) {
-              weeks[wk] = { messages: 0, convos: new Set(), projects: new Set(), range: getWeekRange(d), days: {} };
+              weeks[wk] = { messages: 0, convos: new Set(), projects: new Set(), range: getWeekRange(d), days: {}, timestamps: [] };
               weekOrder.push(wk);
             }
             weeks[wk].messages++;
+            weeks[wk].timestamps.push(d);
             weeks[wk].convos.add(convo.id);
             const projKey = getProjectKey(convo);
             if (projKey) weeks[wk].projects.add(projKey);
 
             const dk = getDayKey(d);
             if (!weeks[wk].days[dk]) {
-              weeks[wk].days[dk] = { messages: 0, convos: new Set(), dow: d.getDay() };
+              weeks[wk].days[dk] = { messages: 0, convos: new Set(), dow: d.getDay(), timestamps: [] };
             }
             weeks[wk].days[dk].messages++;
             weeks[wk].days[dk].convos.add(convo.id);
+            weeks[wk].days[dk].timestamps.push(d);
           }
         }
       }
@@ -2354,12 +2373,15 @@
         const barPct = maxMessages > 0 ? Math.round((data.messages / maxMessages) * 100) : 0;
         const convoCount = data.convos.size;
 
+        const weekHours = computeHoursFromTimestamps(data.timestamps);
+
         html += `<div class="week-card" onclick="this.querySelector('.week-days').classList.toggle('open')">`;
         html += `<div class="week-label">${data.range}</div>`;
         html += `<div class="week-stats">`;
         html += `<div class="week-stat"><div class="num">${data.projects.size}</div><div class="lbl">projects</div></div>`;
         html += `<div class="week-stat"><div class="num">${convoCount}</div><div class="lbl">convos</div></div>`;
         html += `<div class="week-stat"><div class="num">${data.messages}</div><div class="lbl">messages</div></div>`;
+        html += `<div class="week-stat"><div class="num">${formatHours(weekHours)}</div><div class="lbl">hours</div></div>`;
         html += `</div>`;
         html += `<div class="week-bar-track"><div class="week-bar-fill" style="width:${barPct}%"></div></div>`;
 
@@ -2381,10 +2403,11 @@
           const dd = data.days[dk];
           const dayPct = maxDayMessages > 0 ? Math.round((dd.messages / maxDayMessages) * 100) : 0;
           const dayNum = parseInt(dk.split('-')[2]);
+          const dayHours = computeHoursFromTimestamps(dd.timestamps);
           html += `<div class="day-bar-row" onclick="event.stopPropagation(); scrollToHeatmapDay(${dayNum})">`;
           html += `<div class="day-bar-label">${dayNames[dd.dow]}</div>`;
           html += `<div class="day-bar-track-inner"><div class="day-bar-fill-inner" style="width:${dayPct}%"></div></div>`;
-          html += `<div class="day-bar-count">${dd.convos.size}c / ${dd.messages}m</div>`;
+          html += `<div class="day-bar-count">${dd.convos.size}c / ${dd.messages}m / ${formatHours(dayHours)}</div>`;
           html += `</div>`;
         }
         html += `</div></div>`;
@@ -2549,7 +2572,7 @@
               cell.classList.add(`heat-${level}`);
               const msgInfo = displayMode === 'messages'
                 ? `${data.messages} messages`
-                : `${Math.round(data.time)} min`;
+                : data.time >= 100 ? `${(data.time / 60).toFixed(1)} hrs` : `${Math.round(data.time)} min`;
               cell.title = projNames
                 ? `${msgInfo} — ${projNames}`
                 : msgInfo;
@@ -2656,7 +2679,7 @@
         item.innerHTML = `
           <div class="convo-time">${time}</div>
           <div class="convo-preview">${escapeHtml(preview)}${preview.length >= 100 ? '...' : ''}</div>
-          <div class="convo-meta">${convo.messages.length} messages${duration > 0 ? ` / ${duration} min` : ''}</div>
+          <div class="convo-meta">${convo.messages.length} messages${duration > 0 ? ` / ${duration >= 100 ? (duration / 60).toFixed(1) + ' hrs' : duration + ' min'}` : ''}</div>
           ${projectTag}
         `;
 
